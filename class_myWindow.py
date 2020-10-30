@@ -49,8 +49,6 @@ class MyWindow(QMainWindow):
         self.group_liver.clicked.connect(self.liver_check)
         self.group_blood = Group_param(centralwidget, 'Blood pool detection', 380, 640, 370, 150)
         self.group_blood.clicked.connect(self.blood_check)
-        self.group_blood.l1.wid_list[1].valueChanged.connect(self.blood_check)
-        self.group_blood.l2.wid_list[1].valueChanged.connect(self.blood_check)
 
         self.setCentralWidget(centralwidget)
         menubar = QtWidgets.QMenuBar(self)
