@@ -47,10 +47,10 @@ class MyWindow(QMainWindow):
 
         self.group_liver = Group_param(centralwidget, 'Liver detection', 5, 640, 370, 150)
         self.group_liver.clicked.connect(self.liver_check)
-        self.group_liver.l1.wid_list[1].valueChanged.connect(self.liver_check)
         self.group_blood = Group_param(centralwidget, 'Blood pool detection', 380, 640, 370, 150)
         self.group_blood.clicked.connect(self.blood_check)
         self.group_blood.l1.wid_list[1].valueChanged.connect(self.blood_check)
+        self.group_blood.l2.wid_list[1].valueChanged.connect(self.blood_check)
 
         self.setCentralWidget(centralwidget)
         menubar = QtWidgets.QMenuBar(self)
@@ -78,19 +78,13 @@ class MyWindow(QMainWindow):
             self.group_mean.wid_list[2].wid_list[2].setChecked(True)
             self.compute_mean()
         elif event.key()==QtCore.Qt.Key_L:
-            if self.group_liver.isChecked():
-                self.group_liver.setChecked(False)
-                #self.build_liver_mask()
-            else:
-                self.group_liver.setChecked(True)
-                #self.build_liver_mask()
+            if self.group_liver.isChecked(): self.group_liver.setChecked(False)
+            else: self.group_liver.setChecked(True)
+            self.liver_check()
         elif event.key()==QtCore.Qt.Key_B:
-            if self.group_blood.isChecked():
-                self.group_blood.setChecked(False)
-                #self.build_blood_mask()
-            else:
-                self.group_blood.setChecked(True)
-                #self.build_blood_mask()
+            if self.group_blood.isChecked(): self.group_blood.setChecked(False)
+            else: self.group_blood.setChecked(True)
+            self.blood_check()
         else:
             super().keyPressEvent(event)
 
@@ -125,9 +119,11 @@ class MyWindow(QMainWindow):
 
                 if not self.computed:
                     self.group_liver.mask_init(self.avg_last10_u8)
-                    self.group_liver.l1.wid_list[1].valueChanged['int'].connect(self.group_liver.setThresh)
+                    self.group_liver.l1.wid_list[1].valueChanged['int'].connect(self.liver_check)
+                    self.group_liver.l2.wid_list[1].valueChanged['int'].connect(self.liver_check)
                     self.group_blood.mask_init(self.avg_first5_u8, 50)
-                    self.group_blood.l1.wid_list[1].valueChanged['int'].connect(self.group_blood.setThresh)
+                    self.group_blood.l1.wid_list[1].valueChanged['int'].connect(self.blood_check)
+                    self.group_blood.l2.wid_list[1].valueChanged['int'].connect(self.blood_check)
                     self.group_mean.wid_list[-1].clicked.connect(self.show_curve)
                     self.computed = True
 
@@ -142,10 +138,14 @@ class MyWindow(QMainWindow):
 
 
     def liver_check(self):
+        thresh = self.group_liver.l1.wid_list[1].value()
+        morpho = self.group_liver.l2.wid_list[1].value()
+
         if self.computed and self.group_liver.isChecked():
-            self.mask_l = self.group_liver.build_mask()
+            self.mask_l = self.group_liver.build_mask(thresh, morpho)
             if self.group_blood.isChecked(): self.blood_check()
             else: self.group_mean.update_display(self.s.wid_list[0].value(), self.mask_l, None)
+
         elif self.computed and not self.group_liver.isChecked():
             self.mask_l = None
             self.blood_check()
@@ -153,8 +153,11 @@ class MyWindow(QMainWindow):
 
 
     def blood_check(self):
+        thresh = self.group_blood.l1.wid_list[1].value()
+        morpho = self.group_blood.l2.wid_list[1].value()
+
         if self.computed and self.group_blood.isChecked():
-            self.mask_b = self.group_blood.build_mask(self.mask_l)
+            self.mask_b = self.group_blood.build_mask(thresh, morpho, self.mask_l)
             i = self.s.wid_list[0].value()
             if not self.group_liver.isChecked(): self.group_mean.update_display(i, None ,self.mask_b)
             else: self.group_mean.update_display(i, self.mask_l, self.mask_b)
