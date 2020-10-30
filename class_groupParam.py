@@ -1,4 +1,5 @@
 from PyQt5.QtWidgets import QGroupBox, QPushButton, QVBoxLayout, QLabel, QSlider
+from skimage.morphology import erosion, dilation
 from skimage.filters import threshold_otsu
 from skimage.filters.rank import median
 from matplotlib import pyplot as plt
@@ -39,27 +40,42 @@ class Group_param(QGroupBox):
 
 
     def mask_init(self, avg, thresh_shift=0):
+        self.ero = 0
+        self.dila = 0
         self.avg = avg
         self.med = median(self.avg, disk(2))
         self.thresh = threshold_otsu(self.med)+thresh_shift
         self.l1.wid_list[1].setMaximum(self.thresh+75)
         self.l1.wid_list[1].setMinimum(self.thresh-75)
         self.l1.wid_list[1].setValue(self.thresh)
-        self.backup = self.med > self.thresh
 
 
-    def build_mask(self, priority = None):
+    def build_mask(self, thresh, morpho, priority = None):
+        self.thresh = thresh
+        self.setMorpho(morpho)
         mask = self.med > self.thresh
+        if self.dila: mask = dilation(mask, disk(self.dila))
+        elif self.ero: mask = erosion(mask, disk(self.ero))
+
         if priority is not None:
             for i in range(len(priority)):
                 for j in range(len(priority[i])):
                     if priority[i,j]: mask[i,j]=0
+
         self.masked_array = np.ma.masked_where(mask==0, mask)
         return(self.masked_array)
 
 
-    def setThresh(self, i):
-        self.thresh = i
+    def setMorpho(self, i):
+        if i>0:
+            self.dila = i
+            self.ero = 0
+        elif i<0:
+            self.ero = -i
+            self.dila = 0
+        else:
+            self.ero = 0
+            self.dila = 0
 
 
     def show_process(self):
