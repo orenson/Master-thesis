@@ -65,7 +65,7 @@ class GroupImg(QGroupBox):
             exam = str(scinty[0x0008, 0x103E].value)
             genre = str(scinty[0x0010, 0x0040].value)
             age = str(scinty[0x0010, 0x1010].value)
-            weight = str(scinty[0x0010, 0x1030].value)
+            self.weight = str(scinty[0x0010, 0x1030].value)
             self.tot = str(scinty[0x0018, 0x0070].value)
             rows = str(scinty[0x0028, 0x0010].value)
             col = str(scinty[0x0028, 0x0011].value)
@@ -85,7 +85,7 @@ class GroupImg(QGroupBox):
             alignment = (QtCore.Qt.AlignLeft, QtCore.Qt.AlignRight)
             l1 = HLayout(info_widget, [QLabel(), QLabel()], [fname, instit], (0,0,0,0), alignment)
             l2 = HLayout(info_widget, [QLabel(), QLabel()], [patient, exam+' ({}s)'.format(self.time)], (0,0,0,0), alignment)
-            l3 = HLayout(info_widget, [QLabel(), QLabel()], [genre+'   '+age+'   '+weight, frames+' x '+col+' x '+rows], (0,0,0,0), alignment)
+            l3 = HLayout(info_widget, [QLabel(), QLabel()], [genre+'   '+age+'   '+self.weight, frames+' x '+col+' x '+rows], (0,0,0,0), alignment)
             self.l4 = HLayout(info_widget, [QLabel(), QLabel()], [process_date(date), self.tot], (0,0,0,0), alignment)
             info_layout.addWidget(l1)
             info_layout.addWidget(l2)
@@ -115,3 +115,10 @@ class GroupImg(QGroupBox):
 
     def getTimeStep(self):
         return(self.time)
+
+    def getW(self):
+        return(float(self.weight))
+
+    def getH(self):
+        pass
+        #return(self.weight)
