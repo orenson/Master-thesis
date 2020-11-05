@@ -1,5 +1,6 @@
 numpy
 pydicom
 skimage
+scipy
 matplotlib
 PyQt5
