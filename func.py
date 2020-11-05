@@ -94,9 +94,6 @@ def graph(time_step, img_stack, liver_mask, blood_mask, h, w):
                     time_series[-1][1] += img_stack[img,i,j]
         time_series[-1][2] = np.sum(img_stack[img])
     time_steps = [float(time_step)*(i+1) for i in range(len(time_series))]
-    print([time_series[i][0] for i in range(len(time_series))])
-    print([time_series[i][1] for i in range(len(time_series))])
-    print([time_series[i][2] for i in range(len(time_series))])
 
     plt.figure(figsize=[10,5])
     ct = [time_series[i][1] for i in range(len(time_series))]
@@ -112,17 +109,14 @@ def graph(time_step, img_stack, liver_mask, blood_mask, h, w):
     plt.xlabel('Time (sec)')
     plt.ylabel('Gamma event count')
     if liver_mask is not None:
-        line_l, = plt.plot(time_steps,
-        [time_series[i][0] for i in range(len(time_series))], color='#478bff')
+        plt.plot(time_steps,[time_series[i][0] for i in range(len(time_series))],
+                 color='#478bff', label='Liver')
     if blood_mask is not None:
-        line_b, = plt.plot(time_steps, ct, color='#ff4a4a')
+        plt.plot(time_steps, ct, color='#ff4a4a', label='Blood pool)
     #plt.plot(time_steps, [time_series[i][2] for i in range(len(time_series))],
     #color='lightgray',linestyle='--')
 
     plt.grid(linewidth=1)
     plt.tight_layout()
-    try:
-        plt.legend((line_l, line_b, line_f), ('liver', 'blood', 'blood expo fit'))
-    except:
-        pass
+    plt.legend()
     plt.show()
