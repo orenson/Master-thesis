@@ -1,3 +1,3 @@
 # Master-thesis
 
-Hepatobilary scintigraphy images processing and quantification automation
+Hepatobilary scintigraphy image processing and quantification automation
