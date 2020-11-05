@@ -1,7 +1,6 @@
 import sys
 from PyQt5 import QtGui, QtCore
 from class_myWindow import MyWindow
-from matplotlib import pyplot as plt
 from PyQt5.QtWidgets import QApplication
 
 if __name__ == '__main__':
