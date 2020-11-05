@@ -112,7 +112,7 @@ def graph(time_step, img_stack, liver_mask, blood_mask, h, w):
         plt.plot(time_steps,[time_series[i][0] for i in range(len(time_series))],
                  color='#478bff', label='Liver')
     if blood_mask is not None:
-        plt.plot(time_steps, ct, color='#ff4a4a', label='Blood pool)
+        plt.plot(time_steps, ct, color='#ff4a4a', label='Blood pool')
     #plt.plot(time_steps, [time_series[i][2] for i in range(len(time_series))],
     #color='lightgray',linestyle='--')
 

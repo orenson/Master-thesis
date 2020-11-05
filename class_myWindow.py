@@ -174,4 +174,5 @@ class MyWindow(QMainWindow):
 
 
     def show_curve(self):
-        graph(self.group_ant.getTimeStep(), self.mean_f64, self.mask_l, self.mask_b)
+        graph(self.group_ant.getTimeStep(), self.mean_f64, self.mask_l,
+        self.mask_b, 175, self.group_ant.getW())
