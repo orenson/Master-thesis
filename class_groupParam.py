@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QGroupBox, QPushButton, QVBoxLayout, QLabel, QSlider
-from skimage.morphology import erosion, dilation
+from skimage.morphology import erosion, dilation, closing
 from skimage.filters import threshold_otsu
 from skimage.filters.rank import median
 from matplotlib import pyplot as plt
@@ -54,6 +54,7 @@ class Group_param(QGroupBox):
         self.thresh = thresh
         self.setMorpho(morpho)
         mask = self.med > self.thresh
+        mask = closing(mask, disk(3))
         if self.dila: mask = dilation(mask, disk(self.dila))
         elif self.ero: mask = erosion(mask, disk(self.ero))
 
@@ -86,5 +87,6 @@ class Group_param(QGroupBox):
             plt.subplot(1,len(img_list),i+1)
             plt.axis('off')
             plt.title(t)
-            plt.imshow(im, cmap=plt.cm.gray)
+            if i!=2: plt.imshow(im, cmap=plt.cm.gray)
+            else :plt.imshow(im, cmap='Reds')
         plt.show()

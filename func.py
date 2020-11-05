@@ -1,5 +1,7 @@
 from PyQt5.QtWidgets import QFileDialog, QMessageBox
+from scipy.integrate import trapz, simps
 from matplotlib import pyplot as plt
+from math import exp
 import numpy as np
 
 
@@ -62,28 +64,65 @@ def update_plt_param():
     "toolbar": "None"})
 
 
-def graph(time_step, img_stack, liver_mask, blood_mask):
+def liv_utr(ft1, ft2, lt1, lt2, ct, time_steps):
+    cnorm = np.array(ct)/ct[0]
+    print('Cnorm val :', cnorm)
+    at1 = (ft2-lt1-(ft1-lt1)*cnorm[-1])/(1-cnorm[-1])
+    print('A(t1) :', at1)
+    integrate = trapz(cnorm, time_steps)
+    print('Cnorm integrate :', integrate)
+    print('Liver diff L(t2)-L(t1) :', (lt2-lt1))
+    clrate = (lt2-lt1)/(at1*integrate)
+    return(clrate)
+
+
+def bsa_corr(clrate, height, weight):
+    # Haycock formula
+    bsa = 0.024265*(weight**0.5378)*(height**0.3964)
+    return(clrate/bsa)
+
+
+def graph(time_step, img_stack, liver_mask, blood_mask, h, w):
     time_series = []
     for img in range(len(img_stack)):
-        time_series.append([0,0])
+        time_series.append([0,0,0])
         for i in range(len(img_stack[img])):
             for j in range(len(img_stack[img,i])):
                 if liver_mask is not None and liver_mask[i,j]:
                     time_series[-1][0] += img_stack[img,i,j]
                 if blood_mask is not None and blood_mask[i,j]:
                     time_series[-1][1] += img_stack[img,i,j]
+        time_series[-1][2] = np.sum(img_stack[img])
     time_steps = [float(time_step)*(i+1) for i in range(len(time_series))]
+    print([time_series[i][0] for i in range(len(time_series))])
+    print([time_series[i][1] for i in range(len(time_series))])
+    print([time_series[i][2] for i in range(len(time_series))])
 
-    plt.figure(figsize=[8,4])
-    plt.title('Activity vs. Time', color="white")
+    plt.figure(figsize=[10,5])
+    ct = [time_series[i][1] for i in range(len(time_series))]
+    if liver_mask is not None and blood_mask is not None:
+        liver_clr = liv_utr(time_series[14][2], time_series[35][2], time_series[14][0], time_series[35][0], ct[14:35], time_steps[14:35])
+        print('Clearance rate :', liver_clr)
+        corrected = bsa_corr(liver_clr, h, w)
+        print('Clearance corr :', corrected)
+        plt.title('Activity vs. Time\nLiver uptake rate of {:.5f}%/min (corrected at {:.5f}%/min/m^2)'.format(liver_clr, corrected), color="white")
+    else:
+        plt.title('Activity vs. Time', color="white")
+
     plt.xlabel('Time (sec)')
     plt.ylabel('Gamma event count')
     if liver_mask is not None:
-        plt.plot(time_steps,
+        line_l, = plt.plot(time_steps,
         [time_series[i][0] for i in range(len(time_series))], color='#478bff')
     if blood_mask is not None:
-        plt.plot(time_steps,
-        [time_series[i][1] for i in range(len(time_series))], color='#ff4a4a')
+        line_b, = plt.plot(time_steps, ct, color='#ff4a4a')
+    #plt.plot(time_steps, [time_series[i][2] for i in range(len(time_series))],
+    #color='lightgray',linestyle='--')
+
     plt.grid(linewidth=1)
     plt.tight_layout()
+    try:
+        plt.legend((line_l, line_b, line_f), ('liver', 'blood', 'blood expo fit'))
+    except:
+        pass
     plt.show()
