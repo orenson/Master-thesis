@@ -1,5 +1,5 @@
 from matplotlib.backends.backend_qt5agg import FigureCanvas
-from PyQt5.QtWidgets import QGroupBox, QMessageBox, QWidget, QVBoxLayout, QLabel
+from PyQt5.QtWidgets import QGroupBox, QMessageBox, QWidget, QVBoxLayout, QLabel, QInputDialog
 from func import load_file, process_date
 from matplotlib.figure import Figure
 from matplotlib import pyplot as plt
@@ -65,6 +65,7 @@ class GroupImg(QGroupBox):
             exam = str(scinty[0x0008, 0x103E].value)
             genre = str(scinty[0x0010, 0x0040].value)
             age = str(scinty[0x0010, 0x1010].value)
+            self.size = str(scinty[0x0010, 0x1020].value)
             self.weight = str(scinty[0x0010, 0x1030].value)
             self.tot = str(scinty[0x0018, 0x0070].value)
             rows = str(scinty[0x0028, 0x0010].value)
@@ -117,8 +118,15 @@ class GroupImg(QGroupBox):
         return(self.time)
 
     def getW(self):
+        if float(self.weight) == 0:
+            self.weight, okPressed = QInputDialog.getDouble(self,"Weight input",
+            "Weight not specified in dicom file,\nplease enter manually",
+            50.0, 0.0, 500.0, 0.1)
         return(float(self.weight))
 
     def getH(self):
-        pass
-        #return(self.weight)
+        if float(self.size) == 0:
+            self.size, okPressed = QInputDialog.getInt(self,"Size input",
+            "Height not specified in dicom file,\nplease enter manually",
+            160, 50, 250, 1)
+        return(float(self.size))
