@@ -66,19 +66,20 @@ def update_plt_param():
 
 def liv_utr(ft1, ft2, lt1, lt2, ct, time_steps):
     cnorm = np.array(ct)/ct[0]
-    print('Cnorm val :', cnorm)
-    at1 = (ft2-lt1-(ft1-lt1)*cnorm[-1])/(1-cnorm[-1])
+    at1 = (ft2-lt1-(ft1-lt1)*cnorm[-1])/(1-cnorm[-1]) #Ekman eq. 8
     print('A(t1) :', at1)
     integrate = trapz(cnorm, time_steps)
     print('Cnorm integrate :', integrate)
     print('Liver diff L(t2)-L(t1) :', (lt2-lt1))
-    clrate = (lt2-lt1)/(at1*integrate)
-    return(clrate)
+    clrate = (lt2-lt1)/(at1*integrate) #Ekman eq. 4
+    return(clrate*60) #transfo sec->min
 
 
 def bsa_corr(clrate, height, weight):
-    # Haycock formula
+    # Haycock
     bsa = 0.024265*(weight**0.5378)*(height**0.3964)
+    # Mosteller
+    bsa = (height*weight/3600)**(1/2)
     return(clrate/bsa)
 
 
@@ -102,7 +103,7 @@ def graph(time_step, img_stack, liver_mask, blood_mask, h, w):
         print('Clearance rate :', liver_clr)
         corrected = bsa_corr(liver_clr, h, w)
         print('Clearance corr :', corrected)
-        plt.title('Activity vs. Time\nLiver uptake rate of {:.5f}%/min (corrected at {:.5f}%/min/m^2)'.format(liver_clr, corrected), color="white")
+        plt.title('Activity vs. Time\nLiver uptake rate of {:.5f}%/min (corrected at {:.5f}%/min/m^2)'.format(liver_clr*100, corrected*100), color="white")
     else:
         plt.title('Activity vs. Time', color="white")
 

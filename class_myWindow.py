@@ -14,6 +14,7 @@ import numpy as np
 class MyWindow(QMainWindow):
     def __init__(self):
         super(MyWindow, self).__init__()
+        self.setWindowTitle("Hepatobiliary scintigraphy image processing")
         self.setFixedSize(1425, 796)
         centralwidget = QWidget(self)
         self.computed = False
@@ -175,4 +176,4 @@ class MyWindow(QMainWindow):
 
     def show_curve(self):
         graph(self.group_ant.getTimeStep(), self.mean_f64, self.mask_l,
-        self.mask_b, 175, self.group_ant.getW())
+        self.mask_b, 164, self.group_ant.getW())
