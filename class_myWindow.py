@@ -8,6 +8,7 @@ from skimage.morphology import disk
 from PyQt5 import QtCore, QtWidgets
 from class_hLayout import HLayout
 from class_groupImg import GroupImg
+from skimage.draw import ellipse
 import numpy as np
 
 
@@ -20,10 +21,12 @@ class MyWindow(QMainWindow):
         self.computed = False
         self.mask_l = None
         self.mask_b = None
+        self.ell = np.zeros((128, 128), dtype=np.bool)
+        self.ell[ellipse(35, 66, 15, 25, rotation=np.deg2rad(0))] = 1
         plt.ion()
 
         self.s = HLayout(centralwidget, [QSlider(), QLabel()], [None,'0'])
-        self.s.setGeometry(150, 535, 451, 61)
+        self.s.setGeometry(150, 520, 451, 61)
         self.s.wid_list[0].setMaximum(35)
         self.s.wid_list[0].setOrientation(QtCore.Qt.Horizontal)
         self.s.wid_list[0].valueChanged['int'].connect(self.s.wid_list[1].setNum)
@@ -34,21 +37,21 @@ class MyWindow(QMainWindow):
         self.group_post = GroupImg(centralwidget, "Posterior projection", 380, 10, 370, 419, self.s.wid_list[0], True)
         self.group_post.add_widget(QPushButton(), 'Select')
         self.group_mean = GroupImg(centralwidget, "Gmean dataset", 755, 10, 662, 780, self.s.wid_list[0])
-        filters = HLayout(self.group_mean,[QRadioButton() for i in range(3)],['Raw','Median filter','Negative'],(70,0,0,0))
+        filters = HLayout(self.group_mean,[QRadioButton() for i in range(3)],['Raw','Median filter','Negative'],(90,0,0,0))
         filters.setMaximumHeight(33)
         filters.wid_list[0].setChecked(True)
         self.group_mean.add_widget(filters)
-        self.group_mean.wid_list[-1].wid_list[0].clicked.connect(self.compute_mean)
-        self.group_mean.wid_list[-1].wid_list[1].clicked.connect(self.compute_mean)
-        self.group_mean.wid_list[-1].wid_list[2].clicked.connect(self.compute_mean)
+        self.group_mean.wid_list[-1].wid_list[0].clicked.connect(self.transfo_raw)
+        self.group_mean.wid_list[-1].wid_list[1].clicked.connect(self.transfo_med)
+        self.group_mean.wid_list[-1].wid_list[2].clicked.connect(self.transfo_inv)
         self.group_mean.add_widget(QPushButton(), 'Compute')
         self.group_mean.wid_list[-1].clicked.connect(self.compute_mean)
         self.group_mean.add_widget(QPushButton(), 'Show time-activity curve')
         self.s.wid_list[0].valueChanged['int'].connect(self.call_update_display)
 
-        self.group_liver = Group_param(centralwidget, 'Liver detection', 5, 640, 370, 150)
+        self.group_liver = Group_param(centralwidget, 'Liver detection', 5, 620, 370, 170)
         self.group_liver.clicked.connect(self.liver_check)
-        self.group_blood = Group_param(centralwidget, 'Blood pool detection', 380, 640, 370, 150)
+        self.group_blood = Group_param(centralwidget, 'Blood pool detection', 380, 620, 370, 170)
         self.group_blood.clicked.connect(self.blood_check)
 
         self.setCentralWidget(centralwidget)
@@ -99,30 +102,31 @@ class MyWindow(QMainWindow):
             post = self.group_post.getImg()
             if ant.shape == post.shape:
                 self.mean_f64 = (ant*post)**(1/2)
-                mean_u8 = f64_2_u8(self.mean_f64)
+                self.mean_u8 = f64_2_u8(self.mean_f64)
                 avg_last10_f64 = aryth_avg(self.mean_f64[-10:])
                 self.avg_last10_u8 = f64_2_u8(avg_last10_f64)
                 avg_first5_f64 = aryth_avg(self.mean_f64[2:6])
                 self.avg_first5_u8 = f64_2_u8(avg_first5_f64)
-                to_display = mean_u8.copy()
+
+                self.group_liver.mask_init(self.avg_last10_u8)
+                self.group_blood.mask_init(self.avg_first5_u8, 50)
 
                 if self.group_mean.wid_list[2].wid_list[1].isChecked():
-                    for i in range(len(mean_u8)):
-                        med = median(to_display[i], disk(1))
-                        to_display[i] = med
+                    self.transfo_med()
                 elif self.group_mean.wid_list[2].wid_list[2].isChecked():
-                    to_display = np.invert(mean_u8)
+                    self.transfo_inv()
+                else:
+                    self.transfo_raw()
 
-                self.group_mean.setImg(to_display)
-                self.group_mean.update_display(self.s.wid_list[0].value(), self.mask_l, self.mask_b)
-
+                #self.group_liver.mask_init(self.avg_last10_u8)
+                #self.group_blood.mask_init(self.avg_first5_u8, 50)
                 if not self.computed:
-                    self.group_liver.mask_init(self.avg_last10_u8)
                     self.group_liver.l1.wid_list[1].valueChanged['int'].connect(self.liver_check)
                     self.group_liver.l2.wid_list[1].valueChanged['int'].connect(self.liver_check)
-                    self.group_blood.mask_init(self.avg_first5_u8, 50)
+                    self.group_liver.l3.wid_list[1].valueChanged['int'].connect(self.liver_check)
                     self.group_blood.l1.wid_list[1].valueChanged['int'].connect(self.blood_check)
                     self.group_blood.l2.wid_list[1].valueChanged['int'].connect(self.blood_check)
+                    self.group_blood.l3.wid_list[1].valueChanged['int'].connect(self.blood_check)
                     self.group_mean.wid_list[-1].clicked.connect(self.show_curve)
                     self.computed = True
 
@@ -143,35 +147,53 @@ class MyWindow(QMainWindow):
         if self.computed and self.group_liver.isChecked():
             self.mask_l = self.group_liver.build_mask(thresh, morpho)
             if self.group_blood.isChecked(): self.blood_check()
-            else: self.group_mean.update_display(self.s.wid_list[0].value(), self.mask_l, None)
+            else: self.group_mean.update_display(self.s.wid_list[0].value(), self.mask_l, None, self.group_liver.get_trans(), self.group_blood.get_trans())
 
         elif self.computed and not self.group_liver.isChecked():
             self.mask_l = None
             self.blood_check()
-            self.compute_mean()
-
+            self.call_update_display(self.s.wid_list[0].value())
 
     def blood_check(self):
         thresh = self.group_blood.l1.wid_list[1].value()
         morpho = self.group_blood.l2.wid_list[1].value()
 
         if self.computed and self.group_blood.isChecked():
-            self.mask_b = self.group_blood.build_mask(thresh, morpho, self.mask_l)
+            if self.mask_l is not None: self.mask_b = self.group_blood.build_mask(thresh, morpho, self.mask_l, self.ell)
+            else: self.mask_b = self.group_blood.build_mask(thresh, morpho, None, self.ell)
             i = self.s.wid_list[0].value()
-            if not self.group_liver.isChecked(): self.group_mean.update_display(i, None ,self.mask_b)
-            else: self.group_mean.update_display(i, self.mask_l, self.mask_b)
+            if not self.group_liver.isChecked():
+                self.group_mean.update_display(i, None , self.mask_b, self.group_liver.get_trans(), self.group_blood.get_trans())
+            else:
+                self.group_mean.update_display(i, self.mask_l, self.mask_b, self.group_liver.get_trans(), self.group_blood.get_trans())
         elif self.computed and not self.group_blood.isChecked():
             self.mask_b = None
-            self.compute_mean()
+            self.call_update_display(self.s.wid_list[0].value())
 
 
     def call_update_display(self, i):
         if self.group_ant.getImg() is not None:
-            self.group_ant.update_display(i, None, None)
+            self.group_ant.update_display(i, None, None, None, None)
         if self.group_post.getImg() is not None:
-            self.group_post.update_display(i, None, None)
+            self.group_post.update_display(i, None, None, None, None)
         if self.computed:
-            self.group_mean.update_display(i, self.mask_l, self.mask_b)
+            self.group_mean.update_display(i, self.mask_l, self.mask_b, self.group_liver.get_trans(), self.group_blood.get_trans())
+
+
+    def transfo_med(self):
+        to_display = self.mean_u8.copy()
+        for i in range(len(self.mean_u8)):
+            to_display[i] = median(self.mean_u8[i], disk(1))
+        self.group_mean.setImg(to_display)
+        self.group_mean.update_display(self.s.wid_list[0].value(), self.mask_l, self.mask_b, self.group_liver.get_trans(), self.group_blood.get_trans())
+
+    def transfo_inv(self):
+        self.group_mean.setImg(np.invert(self.mean_u8))
+        self.group_mean.update_display(self.s.wid_list[0].value(), self.mask_l, self.mask_b, self.group_liver.get_trans(), self.group_blood.get_trans())
+
+    def transfo_raw(self):
+        self.group_mean.setImg(self.mean_u8)
+        self.group_mean.update_display(self.s.wid_list[0].value(), self.mask_l, self.mask_b, self.group_liver.get_trans(), self.group_blood.get_trans())
 
 
     def show_curve(self):

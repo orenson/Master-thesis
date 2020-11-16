@@ -6,6 +6,8 @@ from matplotlib import pyplot as plt
 from skimage.morphology import disk
 from PyQt5 import QtCore, QtWidgets
 from class_hLayout import HLayout
+from skimage.feature import canny
+from skimage.draw import ellipse
 import numpy as np
 
 
@@ -24,6 +26,7 @@ class Group_param(QGroupBox):
         self.l1=HLayout(self, [QLabel(),QSlider(),QLabel()], ['Threshold :',None,'0'], (0,0,0,0))
         self.l1.wid_list[1].setOrientation(QtCore.Qt.Horizontal)
         self.l1.wid_list[1].valueChanged['int'].connect(self.l1.wid_list[2].setNum)
+        self.l1.wid_list[0].setMinimumSize(90, 0)
         self.l1.wid_list[2].setMinimumSize(30, 0)
         vLayout.addWidget(self.l1)
         self.l2=HLayout(self, [QLabel(),QSlider(),QLabel()], ['Ero / Dilat :',None,'0'], (0,0,0,0))
@@ -31,8 +34,17 @@ class Group_param(QGroupBox):
         self.l2.wid_list[1].valueChanged['int'].connect(self.l2.wid_list[2].setNum)
         self.l2.wid_list[1].setMaximum(5)
         self.l2.wid_list[1].setMinimum(-5)
+        self.l2.wid_list[0].setMinimumSize(90, 0)
         self.l2.wid_list[2].setMinimumSize(30, 0)
         vLayout.addWidget(self.l2)
+        self.l3=HLayout(self, [QLabel(),QSlider(),QLabel()], ['Transparency :',None,'0'], (0,0,0,0))
+        self.l3.wid_list[1].setOrientation(QtCore.Qt.Horizontal)
+        self.l3.wid_list[1].valueChanged['int'].connect(self.l3.wid_list[2].setNum)
+        self.l3.wid_list[1].setMaximum(10)
+        self.l3.wid_list[1].setValue(5)
+        self.l3.wid_list[0].setMinimumSize(90, 0)
+        self.l3.wid_list[2].setMinimumSize(30, 0)
+        vLayout.addWidget(self.l3)
         process = QPushButton('Show build process')
         process.clicked.connect(self.show_process)
         vLayout.addWidget(process)
@@ -45,12 +57,14 @@ class Group_param(QGroupBox):
         self.avg = avg
         self.med = median(self.avg, disk(2))
         self.thresh = threshold_otsu(self.med)+thresh_shift
-        self.l1.wid_list[1].setMaximum(self.thresh+75)
-        self.l1.wid_list[1].setMinimum(self.thresh-75)
+        #self.l1.wid_list[1].setMaximum(self.thresh+75)
+        #self.l1.wid_list[1].setMinimum(self.thresh-75)
+        self.l1.wid_list[1].setMaximum(255)
+        self.l1.wid_list[1].setMinimum(0)
         self.l1.wid_list[1].setValue(self.thresh)
 
 
-    def build_mask(self, thresh, morpho, priority = None):
+    def build_mask(self, thresh, morpho, priority=None, region=None):
         self.thresh = thresh
         self.setMorpho(morpho)
         mask = self.med > self.thresh
@@ -58,10 +72,14 @@ class Group_param(QGroupBox):
         if self.dila: mask = dilation(mask, disk(self.dila))
         elif self.ero: mask = erosion(mask, disk(self.ero))
 
+        if region is not None:
+            mask*=region
+
         if priority is not None:
             for i in range(len(priority)):
                 for j in range(len(priority[i])):
                     if priority[i,j]: mask[i,j]=0
+
 
         self.masked_array = np.ma.masked_where(mask==0, mask)
         return(self.masked_array)
@@ -77,6 +95,9 @@ class Group_param(QGroupBox):
         else:
             self.ero = 0
             self.dila = 0
+
+    def get_trans(self):
+        return(self.l3.wid_list[1].value()/10)
 
 
     def show_process(self):

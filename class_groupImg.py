@@ -4,6 +4,7 @@ from func import load_file, process_date
 from matplotlib.figure import Figure
 from matplotlib import pyplot as plt
 from PyQt5 import QtCore, QtWidgets
+from skimage.feature import canny
 from class_hLayout import HLayout
 import pydicom as pd
 import numpy as np
@@ -32,6 +33,21 @@ class GroupImg(QGroupBox):
         self.vLayout = QtWidgets.QVBoxLayout()
         self.vLayout.addWidget(canvas)
         self.setLayout(self.vLayout)
+
+        self.info_widget = QWidget(self.papa)
+        self.info_widget.setGeometry(self.pos[0]+7, 434, self.pos[2]-14, 70)
+        self.info_widget.setContentsMargins(0,0,0,0)
+        info_layout = QVBoxLayout(self.info_widget)
+        info_layout.setContentsMargins(0,0,0,0)
+        alignment = (QtCore.Qt.AlignLeft, QtCore.Qt.AlignRight)
+        self.l1 = HLayout(self.info_widget, [QLabel(), QLabel()], ["", ""], (0,0,0,0), alignment)
+        self.l2 = HLayout(self.info_widget, [QLabel(), QLabel()], ["", ""], (0,0,0,0), alignment)
+        self.l3 = HLayout(self.info_widget, [QLabel(), QLabel()], ["", ""], (0,0,0,0), alignment)
+        self.l4 = HLayout(self.info_widget, [QLabel(), QLabel()], ["", ""], (0,0,0,0), alignment)
+        info_layout.addWidget(self.l1)
+        info_layout.addWidget(self.l2)
+        info_layout.addWidget(self.l3)
+        info_layout.addWidget(self.l4)
 
 
     def add_widget(self, wid, text=None):
@@ -77,36 +93,37 @@ class GroupImg(QGroupBox):
         else:
             self.slider.setValue(0)
             self.slider.setMaximum(len(self.img_f64)-1)
-
-            info_widget = QWidget(self.papa)
-            info_widget.setGeometry(self.pos[0]+7, 434, self.pos[2]-14, 70)
-            info_widget.setContentsMargins(0,0,0,0)
-            info_layout = QVBoxLayout(info_widget)
-            info_layout.setContentsMargins(0,0,0,0)
-            alignment = (QtCore.Qt.AlignLeft, QtCore.Qt.AlignRight)
-            l1 = HLayout(info_widget, [QLabel(), QLabel()], [fname, instit], (0,0,0,0), alignment)
-            l2 = HLayout(info_widget, [QLabel(), QLabel()], [patient, exam+' ({}s)'.format(self.time)], (0,0,0,0), alignment)
-            l3 = HLayout(info_widget, [QLabel(), QLabel()], [genre+'   '+age+'   '+self.weight, frames+' x '+col+' x '+rows], (0,0,0,0), alignment)
-            self.l4 = HLayout(info_widget, [QLabel(), QLabel()], [process_date(date), self.tot], (0,0,0,0), alignment)
-            info_layout.addWidget(l1)
-            info_layout.addWidget(l2)
-            info_layout.addWidget(l3)
-            info_layout.addWidget(self.l4)
-            info_widget.show()
-            self.update_display(0, None, None)
+            self.l1.wid_list[0].setText(fname)
+            self.l1.wid_list[1].setText(instit)
+            self.l2.wid_list[0].setText(patient)
+            self.l2.wid_list[1].setText(exam+' ({}s)'.format(self.time))
+            self.l3.wid_list[0].setText(genre+'   '+age+'   '+self.weight)
+            self.l3.wid_list[1].setText(frames+' x '+col+' x '+rows)
+            self.l4.wid_list[0].setText(process_date(date))
+            self.update_display(0, None, None, 0.5, 0.5)
 
 
-    def update_display(self, i, mask_l, mask_b):
+    def update_display(self, i, mask_l, mask_b, transpa_l, transpa_b):
+        if transpa_l == 0 and mask_l is not None:
+            mask_l = canny(np.ma.filled(mask_l, 0))
+            mask_l = np.ma.masked_where(mask_l==0, mask_l)
+            transpa_l = 1
+        if transpa_b == 0 and mask_b is not None:
+            mask_b = canny(np.ma.filled(mask_b, 0))
+            mask_b = np.ma.masked_where(mask_b==0, mask_b)
+            transpa_b = 1
+
         self.wid_list[1].clear()
         self.wid_list[1].axis('off')
         self.wid_list[1].imshow(self.img_f64[i], cmap=plt.cm.gray)
         if mask_l is not None:
-            self.wid_list[1].imshow(mask_l, cmap='coolwarm', alpha = 0.5)
+            self.wid_list[1].imshow(mask_l, cmap='coolwarm', alpha = transpa_l)
         if mask_b is not None:
-            self.wid_list[1].imshow(mask_b, cmap='RdYlBu', alpha = 0.5)
+            self.wid_list[1].imshow(mask_b, cmap='RdYlBu', alpha = transpa_b)
         self.wid_list[0].draw()
-        if hasattr(self, 'l4'):
+        if hasattr(self, 'tot'):
             self.l4.wid_list[1].setText(str(np.sum(self.img_f64[i]))+' / '+self.tot)
+
 
     def getImg(self):
         return(self.img_f64)

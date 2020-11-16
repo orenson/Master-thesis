@@ -64,25 +64,26 @@ def update_plt_param():
     "figure.edgecolor": "#151515",
     "toolbar": "None"})
 
-
+'''
 def liv_utr(ft1, ft2, lt1, lt2, ct, time_steps):
     cnorm = np.array(ct)/ct[0]
     at1 = (ft2-lt1-(ft1-lt1)*cnorm[-1])/(1-cnorm[-1]) #Ekman eq. 8
-    print('A(t1) :', at1)
     integral = trapz(cnorm, time_steps)
-    print('Cnorm integrated :', integral)
     clrate = (lt2-lt1)/(at1*integral) #Ekman eq. 4
-    return(clrate*60) #transfo sec->min
+    return(clrate*60) #transfo sec->min'''
+
+def liv_utr(ft1, ft2, lt1, lt2, ct1, ct2, t1, t2, tdemi):
+    bcl = 0.693147/tdemi
+    cnormt2 = ct2/ct1
+    at1 = (ft2-lt1-(ft1-lt1)*cnormt2)/(1-cnormt2)
+    integral = (np.exp(-bcl*t1)-np.exp(-bcl*t2))/(bcl*(np.exp(-bcl*t1)))
+    lcl = (lt2-lt1)/(at1*integral)
+    return(bcl*60, lcl*60)
 
 
-def bsa_corr(clrate, height, weight):
+def bsa(height, weight):
     bsa = (height*weight/3600)**(1/2) # Mosteller
-    print('Body surface :', bsa)
-    return(clrate/bsa)
-
-
-def to_fit(x, a, c, d):
-    return a*np.exp(-c*x)+d
+    return(bsa)
 
 
 def graph(time_step, img_stack, liver_mask, blood_mask, h, w):
@@ -108,23 +109,25 @@ def graph(time_step, img_stack, liver_mask, blood_mask, h, w):
     plt.xlabel('Time (sec)')
     plt.ylabel('Gamma event count')
     if liver_mask is not None:
-        plt.plot(time_steps, lt, color='#478bff', label='Liver')
+        plt.plot(time_steps, lt, color='#478bff', label='Liver activity')
     if blood_mask is not None:
-        plt.plot(time_steps, ct, color='#ff4a4a', label='Blood pool')
-        #loc, scale = expon.fit(ct[14:35])
-        #exp = expon.pdf(time_steps[14:35], loc, scale)
-        #popt, pcov = curve_fit(to_fit, time_steps[14:35], ct[14:35], p0 = (1, 1e-6, 1))
-        #print(popt, pcov)
-        #plt.plot(time_steps[14:35], [to_fit(time_steps[i],*popt) for i in range(14,35)], color='lightgray', linestyle='--', label="Expo fit")
+        plt.plot(time_steps, ct, color='#ff4a4a', label='Blood pool activity')
+        popt, pcov = curve_fit(lambda t,c0,l: c0*np.exp(-l*t), time_steps[15:35], ct[15:35], p0 = (3000, 0.001))
+        plt.plot(time_steps[15:35], [popt[0]*np.exp(-popt[1]*i) for i in time_steps[15:35]],
+        color='lightgray', linestyle='--', label="Expo fit : "+r"$\lambda$"+" = {:.5f}".format(popt[1]))
+        tdemi = 0.693147/popt[1]
+        print('tdemi : {:.2f}'.format(tdemi))
     #plt.plot(time_steps, [time_series[i][2] for i in range(len(time_series))],
     #color='lightgray',linestyle='--')
 
     if liver_mask is not None and blood_mask is not None:
-        liver_clr = liv_utr(ft[14], ft[35], lt[14], lt[35], ct[14:35], time_steps[14:35])
-        print('Clearance rate :', liver_clr)
-        corrected = bsa_corr(liver_clr, h, w)
-        print('Clearance corr :', corrected)
-        plt.title('Activity vs. Time\nLiver uptake rate of {:.3f}%/min (corrected at {:.3f}%/min/m^2)'.format(liver_clr*100, corrected*100), color="white")
+        bcl, liver_clr = liv_utr(ft[15], ft[35], lt[15], lt[35], ct[15], ct[35], time_steps[15], time_steps[35], tdemi)
+        print('Clearance rate : {:.5f}'.format(liver_clr))
+        print('bsa : {:.5f}'.format(bsa(h, w)))
+        corrected = liver_clr/bsa(h, w)
+        corrected_bcl = bcl/bsa(h, w)
+        plt.title('Activity vs. Time\nLiver uptake rate of {:.3f}%/min (corrected at {:.3f}%/min/m^2) and bcl of {:.3f}%/min/m^2'.\
+        format(liver_clr*100, corrected*100, corrected_bcl*100), color="white")
     else:
         plt.title('Activity vs. Time', color="white")
 
