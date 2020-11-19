@@ -64,6 +64,20 @@ def update_plt_param():
     "figure.edgecolor": "#151515",
     "toolbar": "None"})
 
+def match_file(file_list):
+    pairs = []
+    list_copy = file_list.copy()
+    for i in range(len(file_list)):
+        if 'Ant' in file_list[i]: list_copy[i]=file_list[i].replace('Ant', '')
+        elif 'ant' in file_list[i]: list_copy[i]=file_list[i].replace('ant', '')
+        elif 'Post' in file_list[i]: list_copy[i]=file_list[i].replace('Post', '')
+        elif 'post' in file_list[i]: list_copy[i]=file_list[i].replace('post', '')
+    for i in range(len(list_copy)):
+        for j in range(i+1, len(list_copy)):
+            if list_copy[i]==list_copy[j]:
+                pairs.append([i,j,list_copy[i].split('_')[-1].split('.')[0]])
+    return(pairs)
+
 '''
 def liv_utr(ft1, ft2, lt1, lt2, ct, time_steps):
     cnorm = np.array(ct)/ct[0]

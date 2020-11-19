@@ -1,0 +1,5 @@
+#Patient_id,liver_thresh,liver_morpho,blood_thresh,blood_morpho,weight,size
+HBS1bis,76,0,158,1,65.0,164.0
+HBS1,87,1,130,1,65.0,164.0
+HBS2,92,1,94,1,70.0,173.0
+HBS2bis,41,-1,100,1,70.0,174.0

@@ -59,12 +59,13 @@ class GroupImg(QGroupBox):
             self.wid_list[-1].clicked.connect(self.load_dicom)
 
 
-    def load_dicom(self):
-        path = load_file()
-        if path:
+    def load_dicom(self, path=None):
+        if not path: path = load_file()
+        self.path = path
+        if self.path:
             try:
-                scinty = pd.dcmread(path)
-                print(path, "opened")
+                scinty = pd.dcmread(self.path)
+                print(self.path, "opened")
             except:
                 QMessageBox(QMessageBox.Warning, "Error", "Can't open file").exec_()
             else:
@@ -97,7 +98,7 @@ class GroupImg(QGroupBox):
             self.l1.wid_list[1].setText(instit)
             self.l2.wid_list[0].setText(patient)
             self.l2.wid_list[1].setText(exam+' ({}s)'.format(self.time))
-            self.l3.wid_list[0].setText(genre+'   '+age+'   '+self.weight)
+            self.l3.wid_list[0].setText(genre+'  '+age+'  '+self.weight+'  '+self.size)
             self.l3.wid_list[1].setText(frames+' x '+col+' x '+rows)
             self.l4.wid_list[0].setText(process_date(date))
             self.update_display(0, None, None, 0.5, 0.5)
@@ -134,6 +135,9 @@ class GroupImg(QGroupBox):
     def getTimeStep(self):
         return(self.time)
 
+    def getPath(self):
+        return(self.path)
+
     def getW(self):
         if float(self.weight) == 0:
             self.weight, okPressed = QInputDialog.getDouble(self,"Weight input",
@@ -141,9 +145,15 @@ class GroupImg(QGroupBox):
             50.0, 0.0, 500.0, 0.1)
         return(float(self.weight))
 
+    def setW(self, x):
+        self.weight = x
+
     def getH(self):
         if float(self.size) == 0:
             self.size, okPressed = QInputDialog.getInt(self,"Size input",
             "Height not specified in dicom file,\nplease enter manually",
             160, 50, 250, 1)
         return(float(self.size))
+
+    def setH(self, x):
+        self.size = x
