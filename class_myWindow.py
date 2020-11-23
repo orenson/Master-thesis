@@ -1,14 +1,15 @@
 from PyQt5.QtWidgets import QRadioButton, QSlider, QLabel, QMessageBox
 from PyQt5.QtWidgets import QMainWindow, QWidget, QPushButton
 from func import f64_2_u8, aryth_avg, update_plt_param, graph
+from skimage.morphology import disk, closing
 from matplotlib import cm, pyplot as plt
 from class_groupParam import Group_param
 from skimage.filters.rank import median
-from skimage.morphology import disk
 from PyQt5 import QtCore, QtWidgets
 from class_hLayout import HLayout
 from class_groupImg import GroupImg
 from skimage.draw import ellipse
+from scipy import ndimage
 import numpy as np
 import os
 
@@ -22,6 +23,7 @@ class MyWindow(QMainWindow):
         self.computed = False
         self.mask_l = None
         self.mask_b = None
+        self.shift_list = None
         self.ell = np.zeros((128, 128), dtype=np.bool)
         self.ell[ellipse(45, 66, 20, 25, rotation=np.deg2rad(0))] = 1
         plt.ion()
@@ -70,6 +72,7 @@ class MyWindow(QMainWindow):
             self.group_blood.setChecked(True)
             self.group_liver.l1.wid_list[1].setValue(self.group_liver.l1.wid_list[1].value()+1)
             self.group_liver.l1.wid_list[1].setValue(self.group_liver.l1.wid_list[1].value()-1)
+            self.respi()
 
 
     def keyPressEvent(self, event):
@@ -139,13 +142,18 @@ class MyWindow(QMainWindow):
                     self.group_mean.wid_list[-1].clicked.connect(self.save)
                     self.group_mean.wid_list[-2].clicked.connect(self.show_curve)
                     self.computed = True
+                    self.group_liver.l1.wid_list[1].sliderReleased.connect(self.respi)
+                    self.group_liver.l2.wid_list[1].sliderReleased.connect(self.respi)
+                    #self.group_liver.clicked.connect(self.respi)
 
                 scinty_id = self.group_ant.getPath().split('/')[-1].split('_')[-1].split('.')[0]
                 directory = '/'.join(self.group_ant.getPath().split('/')[:-1])+'/'
+                found = False
                 if os.path.exists(directory+'.hbs_presets.txt'):
                     with open(directory+'.hbs_presets.txt', "r") as f:
                         for line in f.readlines():
                             if line.strip().split(',')[0]==scinty_id:
+                                found = True
                                 print('presets found')
                                 self.group_liver.l1.wid_list[1].setValue(int(line.strip().split(',')[1]))
                                 self.group_liver.l2.wid_list[1].setValue(int(line.strip().split(',')[2]))
@@ -153,6 +161,8 @@ class MyWindow(QMainWindow):
                                 self.group_blood.l2.wid_list[1].setValue(int(line.strip().split(',')[4]))
                                 self.group_ant.setW(float(line.strip().split(',')[5]))
                                 self.group_ant.setH(float(line.strip().split(',')[6]))
+                self.respi()
+
             else:
                 QMessageBox(QMessageBox.Warning, "Error",\
                 "Projections must have same format :\
@@ -170,7 +180,8 @@ class MyWindow(QMainWindow):
         if self.computed and self.group_liver.isChecked():
             self.mask_l = self.group_liver.build_mask(thresh, morpho)
             if self.group_blood.isChecked(): self.blood_check()
-            else: self.group_mean.update_display(self.s.wid_list[0].value(), self.mask_l, None, self.group_liver.get_trans(), self.group_blood.get_trans())
+            else: self.group_mean.update_display(self.s.wid_list[0].value(), self.mask_l,
+            None, self.group_liver.get_trans(), self.group_blood.get_trans(), self.shift_list)
 
         elif self.computed and not self.group_liver.isChecked():
             self.mask_l = None
@@ -186,43 +197,65 @@ class MyWindow(QMainWindow):
             else: self.mask_b = self.group_blood.build_mask(thresh, morpho, None, self.ell)
             i = self.s.wid_list[0].value()
             if not self.group_liver.isChecked():
-                self.group_mean.update_display(i, None , self.mask_b, self.group_liver.get_trans(), self.group_blood.get_trans())
+                self.group_mean.update_display(i, None , self.mask_b,
+                self.group_liver.get_trans(), self.group_blood.get_trans(), self.shift_list)
             else:
-                self.group_mean.update_display(i, self.mask_l, self.mask_b, self.group_liver.get_trans(), self.group_blood.get_trans())
+                self.group_mean.update_display(i, self.mask_l, self.mask_b,
+                self.group_liver.get_trans(), self.group_blood.get_trans(), self.shift_list)
         elif self.computed and not self.group_blood.isChecked():
             self.mask_b = None
             self.call_update_display(self.s.wid_list[0].value())
 
+    def respi(self):
+        print('released')
+        if self.mask_l is not None and self.group_liver.isChecked():
+            self.shift_list = [0 for i in range(len(self.mean_f64))]
+            for im in range(len(self.mean_f64)):
+                tot = np.sum(self.mask_l*self.mean_f64[im])
+                for i in range(1,6):
+                    shifted_liv = ndimage.shift(self.mask_l, [i,0])
+                    shifted_liv = closing(shifted_liv,disk(3))
+                    shifted_liv = np.ma.masked_where(shifted_liv==0, shifted_liv)
+                    if np.sum(shifted_liv*self.mean_f64[im])>tot:
+                        tot=np.sum(shifted_liv*self.mean_f64[im])
+                        print('{} shifted to {}'.format(im, i))
+                        self.shift_list[im]=i
+
+
     def call_update_display(self, i):
         if self.group_ant.getImg() is not None:
-            self.group_ant.update_display(i, None, None, None, None)
+            self.group_ant.update_display(i, None, None, None, None, None)
         if self.group_post.getImg() is not None:
-            self.group_post.update_display(i, None, None, None, None)
+            self.group_post.update_display(i, None, None, None, None, None)
         if self.computed:
-            self.group_mean.update_display(i, self.mask_l, self.mask_b, self.group_liver.get_trans(), self.group_blood.get_trans())
+            self.group_mean.update_display(i, self.mask_l, self.mask_b,
+            self.group_liver.get_trans(), self.group_blood.get_trans(), self.shift_list)
 
     def transfo_med(self):
         to_display = self.mean_u8.copy()
         for i in range(len(self.mean_u8)):
             to_display[i] = median(self.mean_u8[i], disk(1))
         self.group_mean.setImg(to_display)
-        self.group_mean.update_display(self.s.wid_list[0].value(), self.mask_l, self.mask_b, self.group_liver.get_trans(), self.group_blood.get_trans())
+        self.group_mean.update_display(self.s.wid_list[0].value(), self.mask_l, self.mask_b,
+        self.group_liver.get_trans(), self.group_blood.get_trans(), self.shift_list)
 
     def transfo_inv(self):
         self.group_mean.setImg(np.invert(self.mean_u8))
-        self.group_mean.update_display(self.s.wid_list[0].value(), self.mask_l, self.mask_b, self.group_liver.get_trans(), self.group_blood.get_trans())
+        self.group_mean.update_display(self.s.wid_list[0].value(), self.mask_l, self.mask_b,
+        self.group_liver.get_trans(), self.group_blood.get_trans(), self.shift_list)
 
     def transfo_raw(self):
         self.group_mean.setImg(self.mean_u8)
-        self.group_mean.update_display(self.s.wid_list[0].value(), self.mask_l, self.mask_b, self.group_liver.get_trans(), self.group_blood.get_trans())
+        self.group_mean.update_display(self.s.wid_list[0].value(), self.mask_l, self.mask_b,
+        self.group_liver.get_trans(), self.group_blood.get_trans(), self.shift_list)
 
     def show_curve(self):
         if self.mask_l is not None and self.mask_b is not None:
             graph(self.group_ant.getTimeStep(), self.mean_f64, self.mask_l,
-            self.mask_b, self.group_ant.getH(), self.group_ant.getW())
+            self.mask_b, self.group_ant.getH(), self.group_ant.getW(), self.shift_list)
         else:
             graph(self.group_ant.getTimeStep(), self.mean_f64, self.mask_l,
-            self.mask_b, None, None)
+            self.mask_b, None, None, None)
 
     def save(self):
         scinty_id = self.group_ant.getPath().split('/')[-1].split('_')[-1].split('.')[0]

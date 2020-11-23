@@ -1,11 +1,12 @@
 import numpy as np
 import pydicom as pd
 from math import exp
+from scipy import ndimage
 from skimage.draw import ellipse
-from skimage.morphology import disk
 from scipy.optimize import curve_fit
 from skimage.filters.rank import median
 from skimage.filters import threshold_otsu
+from skimage.morphology import disk, closing
 from func import aryth_avg, f64_2_u8, liv_utr, bsa
 from skimage.morphology import erosion, dilation, closing
 
@@ -17,6 +18,7 @@ blood_thresh=None, blood_morpho=0, w=65, h=160):
     ant_pix = ant.pixel_array
     post_pix = post.pixel_array[:,:,::-1]
     mean_f64 = (ant_pix*post_pix)**(1/2)
+    shift = [0 for i in range(len(mean_f64))]
     #mean_u8 = f64_2_u8(mean_f64)
 
     avg_last10_f64 = aryth_avg(mean_f64[-10:])
@@ -28,6 +30,16 @@ blood_thresh=None, blood_morpho=0, w=65, h=160):
     liv_mask = closing(liv_mask, disk(3))
     if liv_morpho>0: liv_mask = dilation(liv_mask, disk(liv_morpho))
     elif liv_morpho<0: liv_mask = erosion(liv_mask, disk(-liv_morpho))
+    for im in range(len(mean_f64)):
+        tot = np.sum(liv_mask*mean_f64[im])
+        for i in range(1,6):
+            shifted_liv = ndimage.shift(liv_mask, [i,0])
+            shifted_liv = closing(shifted_liv,disk(3))
+            shifted_liv = np.ma.masked_where(shifted_liv==0, shifted_liv)
+            if np.sum(shifted_liv*mean_f64[im])>tot:
+                tot=np.sum(shifted_liv*mean_f64[im])
+                #print('{} shifted to {}'.format(im, i))
+                shift[im]=i
 
     avg_first5_f64 = aryth_avg(mean_f64[2:6])
     avg_first5_u8 = f64_2_u8(avg_first5_f64)
@@ -48,10 +60,18 @@ blood_thresh=None, blood_morpho=0, w=65, h=160):
     time_series = []
     for img in range(len(mean_f64)):
         time_series.append([0,0,0])
+        shifted_mask=None
+        if shift[img]:
+            shifted_mask = ndimage.shift(liv_mask, [shift[img],0])
+            shifted_mask = closing(shifted_mask,disk(3))
+            shifted_mask = np.ma.masked_where(shifted_mask==0, shifted_mask)
         for i in range(len(mean_f64[img])):
             for j in range(len(mean_f64[img,i])):
-                if liv_mask[i,j]:
+                if shifted_mask is not None and shifted_mask[i,j]:
                     time_series[-1][0] += mean_f64[img,i,j]
+                elif shifted_mask is None and liv_mask[i,j]:
+                    time_series[-1][0] += mean_f64[img,i,j]
+
                 if blood_mask[i,j]:
                     time_series[-1][1] += mean_f64[img,i,j]
         time_series[-1][2] = np.sum(mean_f64[img])

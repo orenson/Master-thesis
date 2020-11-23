@@ -1,11 +1,13 @@
 from matplotlib.backends.backend_qt5agg import FigureCanvas
 from PyQt5.QtWidgets import QGroupBox, QMessageBox, QWidget, QVBoxLayout, QLabel, QInputDialog
+from skimage.morphology import closing, disk
 from func import load_file, process_date
 from matplotlib.figure import Figure
 from matplotlib import pyplot as plt
 from PyQt5 import QtCore, QtWidgets
 from skimage.feature import canny
 from class_hLayout import HLayout
+from scipy import ndimage
 import pydicom as pd
 import numpy as np
 
@@ -101,10 +103,14 @@ class GroupImg(QGroupBox):
             self.l3.wid_list[0].setText(genre+'  '+age+'  '+self.weight+'  '+self.size)
             self.l3.wid_list[1].setText(frames+' x '+col+' x '+rows)
             self.l4.wid_list[0].setText(process_date(date))
-            self.update_display(0, None, None, 0.5, 0.5)
+            self.update_display(0, None, None, 0.5, 0.5, None)
 
 
-    def update_display(self, i, mask_l, mask_b, transpa_l, transpa_b):
+    def update_display(self, i, mask_l, mask_b, transpa_l, transpa_b, shift):
+        if shift and shift[i]:
+            mask_l = ndimage.shift(mask_l, [shift[i],0])
+            mask_l = closing(mask_l,disk(3))
+            mask_l = np.ma.masked_where(mask_l==0, mask_l)
         if transpa_l == 0 and mask_l is not None:
             mask_l = canny(np.ma.filled(mask_l, 0))
             mask_l = np.ma.masked_where(mask_l==0, mask_l)

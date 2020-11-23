@@ -52,25 +52,23 @@ class Group_param(QGroupBox):
 
 
     def mask_init(self, avg, thresh_shift=0):
-        self.ero = 0
-        self.dila = 0
         self.avg = avg
         self.med = median(self.avg, disk(2))
         self.thresh = threshold_otsu(self.med)+thresh_shift
-        #self.l1.wid_list[1].setMaximum(self.thresh+75)
-        #self.l1.wid_list[1].setMinimum(self.thresh-75)
         self.l1.wid_list[1].setMaximum(255)
         self.l1.wid_list[1].setMinimum(0)
         self.l1.wid_list[1].setValue(self.thresh)
+        self.l2.wid_list[1].setValue(0)
 
 
     def build_mask(self, thresh, morpho, priority=None, region=None):
         self.thresh = thresh
-        self.setMorpho(morpho)
         mask = self.med > self.thresh
         mask = closing(mask, disk(3))
-        if self.dila: mask = dilation(mask, disk(self.dila))
-        elif self.ero: mask = erosion(mask, disk(self.ero))
+        #if self.dila: mask = dilation(mask, disk(self.dila))
+        #elif self.ero: mask = erosion(mask, disk(self.ero))
+        if morpho>0: mask = dilation(mask, disk(morpho))
+        elif morpho<0: mask = erosion(mask, disk(-morpho))
 
         if region is not None:
             mask*=region
@@ -80,21 +78,9 @@ class Group_param(QGroupBox):
                 for j in range(len(priority[i])):
                     if priority[i,j]: mask[i,j]=0
 
-
         self.masked_array = np.ma.masked_where(mask==0, mask)
         return(self.masked_array)
 
-
-    def setMorpho(self, i):
-        if i>0:
-            self.dila = i
-            self.ero = 0
-        elif i<0:
-            self.ero = -i
-            self.dila = 0
-        else:
-            self.ero = 0
-            self.dila = 0
 
     def get_trans(self):
         return(self.l3.wid_list[1].value()/10)

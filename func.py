@@ -1,7 +1,9 @@
 from PyQt5.QtWidgets import QFileDialog, QMessageBox
+from skimage.morphology import disk, closing
 from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.integrate import trapz
+from scipy import ndimage
 from math import exp
 import numpy as np
 
@@ -77,14 +79,7 @@ def match_file(file_list):
             if list_copy[i]==list_copy[j]:
                 pairs.append([i,j,list_copy[i].split('_')[-1].split('.')[0]])
     return(pairs)
-
-'''
-def liv_utr(ft1, ft2, lt1, lt2, ct, time_steps):
-    cnorm = np.array(ct)/ct[0]
-    at1 = (ft2-lt1-(ft1-lt1)*cnorm[-1])/(1-cnorm[-1]) #Ekman eq. 8
-    integral = trapz(cnorm, time_steps)
-    clrate = (lt2-lt1)/(at1*integral) #Ekman eq. 4
-    return(clrate*60) #transfo sec->min'''
+    
 
 def liv_utr(ft1, ft2, lt1, lt2, ct1, ct2, t1, t2, tdemi):
     bcl = 0.693147/tdemi
@@ -100,13 +95,21 @@ def bsa(height, weight):
     return(bsa)
 
 
-def graph(time_step, img_stack, liver_mask, blood_mask, h, w):
+def graph(time_step, img_stack, liver_mask, blood_mask, h, w, shift):
     time_series = []
     for img in range(len(img_stack)):
         time_series.append([0,0,0])
+        shifted_mask=None
+        if shift and shift[img]:
+            print('shifted mask for calcul')
+            shifted_mask = ndimage.shift(liver_mask, [shift[img],0])
+            shifted_mask = closing(shifted_mask,disk(3))
+            shifted_mask = np.ma.masked_where(shifted_mask==0, shifted_mask)
         for i in range(len(img_stack[img])):
             for j in range(len(img_stack[img,i])):
-                if liver_mask is not None and liver_mask[i,j]:
+                if shifted_mask is not None and shifted_mask[i,j]:
+                    time_series[-1][0] += img_stack[img,i,j]
+                elif liver_mask is not None and shifted_mask is None and liver_mask[i,j]:
                     time_series[-1][0] += img_stack[img,i,j]
                 if blood_mask is not None and blood_mask[i,j]:
                     time_series[-1][1] += img_stack[img,i,j]
