@@ -5,6 +5,7 @@ from func import load_file, process_date
 from matplotlib.figure import Figure
 from matplotlib import pyplot as plt
 from PyQt5 import QtCore, QtWidgets
+from skimage.color import gray2rgba
 from skimage.feature import canny
 from class_hLayout import HLayout
 from scipy import ndimage
@@ -19,6 +20,7 @@ class GroupImg(QGroupBox):
         self.slider = slider
         self.pos = (x,y,w,h)
         self.flip = flip
+        self.shift_list = None
         self.img_f64 = None
         self.setGeometry(*self.pos)
         self.setAlignment(QtCore.Qt.AlignCenter)
@@ -106,30 +108,34 @@ class GroupImg(QGroupBox):
             self.update_display(0, None, None, 0.5, 0.5, None)
 
 
-    def update_display(self, i, mask_l, mask_b, transpa_l, transpa_b, shift):
+    def update_display(self, i, mask_l, mask_b, transpa_l, transpa_b, shift, apply=True):
         if shift and shift[i]:
             mask_l = ndimage.shift(mask_l, [shift[i],0])
             mask_l = closing(mask_l,disk(3))
-            mask_l = np.ma.masked_where(mask_l==0, mask_l)
         if transpa_l == 0 and mask_l is not None:
-            mask_l = canny(np.ma.filled(mask_l, 0))
-            mask_l = np.ma.masked_where(mask_l==0, mask_l)
+            mask_l = canny(mask_l)
             transpa_l = 1
         if transpa_b == 0 and mask_b is not None:
-            mask_b = canny(np.ma.filled(mask_b, 0))
-            mask_b = np.ma.masked_where(mask_b==0, mask_b)
+            mask_b = canny(mask_b)
             transpa_b = 1
 
-        self.wid_list[1].clear()
-        self.wid_list[1].axis('off')
-        self.wid_list[1].imshow(self.img_f64[i], cmap=plt.cm.gray)
-        if mask_l is not None:
-            self.wid_list[1].imshow(mask_l, cmap='coolwarm', alpha = transpa_l)
-        if mask_b is not None:
-            self.wid_list[1].imshow(mask_b, cmap='RdYlBu', alpha = transpa_b)
-        self.wid_list[0].draw()
-        if hasattr(self, 'tot'):
-            self.l4.wid_list[1].setText(str(np.sum(self.img_f64[i]))+' / '+self.tot)
+        if apply:
+            self.wid_list[1].clear()
+            self.wid_list[1].axis('off')
+            self.wid_list[1].imshow(self.img_f64[i], cmap=plt.cm.gray)
+            if mask_l is not None:
+                mask_l = np.ma.masked_where(mask_l==0, mask_l)
+                self.wid_list[1].imshow(mask_l, cmap='coolwarm', alpha = transpa_l, interpolation="nearest")
+            if mask_b is not None:
+                mask_b = np.ma.masked_where(mask_b==0, mask_b)
+                self.wid_list[1].imshow(mask_b, cmap='RdYlBu', alpha = transpa_b, interpolation="nearest")
+            self.wid_list[0].draw()
+            if hasattr(self, 'tot'):
+                self.l4.wid_list[1].setText(str(np.sum(self.img_f64[i]))+' / '+self.tot)
+        else:
+            if mask_l is not None: mask_l = np.ma.masked_where(mask_l==0, mask_l)
+            if mask_b is not None: mask_b = np.ma.masked_where(mask_b==0, mask_b)
+            return(mask_l, mask_b)
 
 
     def getImg(self):

@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QGroupBox, QPushButton, QVBoxLayout, QLabel, QSlider
+from PyQt5.QtWidgets import QGroupBox, QPushButton, QVBoxLayout, QLabel, QSlider, QCheckBox
 from skimage.morphology import erosion, dilation, closing
 from skimage.filters import threshold_otsu
 from skimage.filters.rank import median
@@ -15,8 +15,8 @@ class Group_param(QGroupBox):
     def __init__(self, parent, title, x, y, w, h):
         super(Group_param, self).__init__(parent)
         self.papa = parent
-        self.pos = (x,y,w,h)
-        self.setGeometry(*self.pos)
+        #self.pos = (x,y,w,h)
+        self.setGeometry(x,y,w,h)
         self.setAlignment(QtCore.Qt.AlignCenter)
         self.setTitle(title)
         self.setCheckable(True)
@@ -45,6 +45,10 @@ class Group_param(QGroupBox):
         self.l3.wid_list[0].setMinimumSize(90, 0)
         self.l3.wid_list[2].setMinimumSize(30, 0)
         vLayout.addWidget(self.l3)
+        self.l4=HLayout(self, [QCheckBox(),QPushButton(),QPushButton(),QPushButton(),
+        QPushButton()],['All','Left','Up','Down','Right'], (0,0,0,0))
+        #self.l4.wid_list[1].valueChanged['int'].connect(self.l3.wid_list[2].setNum)
+        vLayout.addWidget(self.l4)
         process = QPushButton('Show build process')
         process.clicked.connect(self.show_process)
         vLayout.addWidget(process)
@@ -63,23 +67,20 @@ class Group_param(QGroupBox):
 
     def build_mask(self, thresh, morpho, priority=None, region=None):
         self.thresh = thresh
-        mask = self.med > self.thresh
-        mask = closing(mask, disk(3))
-        #if self.dila: mask = dilation(mask, disk(self.dila))
-        #elif self.ero: mask = erosion(mask, disk(self.ero))
-        if morpho>0: mask = dilation(mask, disk(morpho))
-        elif morpho<0: mask = erosion(mask, disk(-morpho))
+        self.mask = self.med > self.thresh
+        self.mask = closing(self.mask, disk(3))
+        if morpho>0: self.mask = dilation(self.mask, disk(morpho))
+        elif morpho<0: self.mask = erosion(self.mask, disk(-morpho))
 
         if region is not None:
-            mask*=region
+            self.mask*=region
 
         if priority is not None:
             for i in range(len(priority)):
                 for j in range(len(priority[i])):
-                    if priority[i,j]: mask[i,j]=0
+                    if priority[i,j]: self.mask[i,j]=0
 
-        self.masked_array = np.ma.masked_where(mask==0, mask)
-        return(self.masked_array)
+        return(self.mask)
 
 
     def get_trans(self):
@@ -87,7 +88,8 @@ class Group_param(QGroupBox):
 
 
     def show_process(self):
-        img_list = [self.avg, self.med, self.masked_array]
+        masked = np.ma.masked_where(self.mask==0, self.mask)
+        img_list = [self.avg, self.med, masked]
         title_list = ['Avg', 'Median', 'Mask']
         plt.figure(figsize=[12,4])
         for i,t,im in zip(range(len(img_list)), title_list, img_list):

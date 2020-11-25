@@ -1,14 +1,17 @@
 from PyQt5.QtWidgets import QRadioButton, QSlider, QLabel, QMessageBox
-from PyQt5.QtWidgets import QMainWindow, QWidget, QPushButton
-from func import f64_2_u8, aryth_avg, update_plt_param, graph
+from PyQt5.QtWidgets import QMainWindow, QWidget, QPushButton, QInputDialog
+from func import f64_2_u8, aryth_avg, update_plt_param, graph, gird_shape
 from skimage.morphology import disk, closing
 from matplotlib import cm, pyplot as plt
 from class_groupParam import Group_param
 from skimage.filters.rank import median
-from PyQt5 import QtCore, QtWidgets
+from matplotlib import image as mpimg
+from PyQt5 import QtCore, QtWidgets, QtGui
 from class_hLayout import HLayout
 from class_groupImg import GroupImg
+from class_screenshot import ScreenshotWindow
 from skimage.draw import ellipse
+from PyQt5.QtCore import Qt
 from scipy import ndimage
 import numpy as np
 import os
@@ -59,9 +62,15 @@ class MyWindow(QMainWindow):
         self.group_blood.clicked.connect(self.blood_check)
 
         self.setCentralWidget(centralwidget)
-        menubar = QtWidgets.QMenuBar(self)
-        menubar.setGeometry(0, 0, 928, 22)
-        self.setMenuBar(menubar)
+
+        #bar = self.menuBar()
+        #bar.setNativeMenuBar(False)
+        #bar = QtGui.MenuBar()
+        #menuFile = bar.addMenu("File")
+        #exit = QtGui.QAction(QtGui.QIcon('images/app_icon.png'), 'Exit', self )
+        #menuFile.addAction(exit)
+
+        #self.group_mean.wid_list[0].setCursor(Qt.SizeAllCursor)
         update_plt_param()
 
         if path_ant and path_post:
@@ -86,13 +95,13 @@ class MyWindow(QMainWindow):
             self.s.wid_list[0].setValue(self.s.wid_list[0].value() - 1)
         elif event.key()==QtCore.Qt.Key_R:
             self.group_mean.wid_list[2].wid_list[0].setChecked(True)
-            self.compute_mean()
+            if self.computed: self.transfo_raw()
         elif event.key()==QtCore.Qt.Key_M:
             self.group_mean.wid_list[2].wid_list[1].setChecked(True)
-            self.compute_mean()
+            if self.computed: self.transfo_med()
         elif event.key()==QtCore.Qt.Key_N:
             self.group_mean.wid_list[2].wid_list[2].setChecked(True)
-            self.compute_mean()
+            if self.computed: self.transfo_inv()
         elif event.key()==QtCore.Qt.Key_L:
             if self.group_liver.isChecked(): self.group_liver.setChecked(False)
             else: self.group_liver.setChecked(True)
@@ -101,11 +110,57 @@ class MyWindow(QMainWindow):
             if self.group_blood.isChecked(): self.group_blood.setChecked(False)
             else: self.group_blood.setChecked(True)
             self.blood_check()
+        elif event.key()==QtCore.Qt.Key_C:
+            if self.computed:
+                self.win = ScreenshotWindow(self.group_ant.getImg().shape[0])
+                if self.win.exec_():
+                    selection, res, view, fname = self.win.get_info()
+                    if len(selection)>0 and res:
+                        prefix = fname.split('.png')[0]
+                        fname1 = prefix+'_slices.png'
+                        fname2 = prefix+'_timeSeries.png'
+                    else: fname1 = fname2 = fname
+                    gird_y, gird_x = gird_shape(len(selection))
+                    #plt.figure(figsize=[12,7])
+                    for i in range(len(selection)):
+                        plt.subplot(gird_y,gird_x,i+1)
+                        plt.axis('off')
+                        plt.title("Mean {}".format(selection[i]), fontdict={'fontsize': 8})
+                        plt.imshow(self.mean_f64[selection[i]-1],cmap=plt.cm.gray)
+                        mask_liv, mask_blo = self.group_mean.update_display(i,
+                        self.mask_l, self.mask_b,0, 0, self.shift_list, apply=False)
+                        if self.mask_l is not None:
+                            plt.imshow(mask_liv, cmap='coolwarm', interpolation="nearest")
+                        if self.mask_b is not None:
+                            plt.imshow(mask_blo, cmap='RdYlBu', interpolation="nearest")
+                        if i==len(selection)-1:
+                            plt.tight_layout()
+                            plt.savefig(fname1, bbox_inches='tight')
+                            plt.close()
+                            if view:
+                                plt.figure(1,figsize=[8,5])
+                                plt.axis('off')
+                                plt.tight_layout()
+                                plt.imshow(mpimg.imread(fname1))
+                    if res:
+                        if self.mask_l is not None and self.mask_b is not None:
+                            plot = self.show_curve(show=False)
+                            plot.savefig(fname2, bbox_inches='tight')
+                            plt.close()
+                            if view:
+                                plt.figure(2,figsize=[8,5])
+                                plt.axis('off')
+                                plt.tight_layout()
+                                plt.imshow(mpimg.imread(fname2))
+                        else: QMessageBox(QMessageBox.Warning, "Error",
+                        "Plot failed, both masks sould be selected to generate results").exec_()
+                    if view: plt.show()
+
         else:
             super().keyPressEvent(event)
 
 
-    def wheelEvent(self,event):
+    def wheelEvent(self, event):
         delta = int(event.angleDelta().y()/8)/15
         self.s.wid_list[0].setValue(self.s.wid_list[0].value() + delta)
 
@@ -124,6 +179,7 @@ class MyWindow(QMainWindow):
 
                 self.group_liver.mask_init(self.avg_last10_u8)
                 self.group_blood.mask_init(self.avg_first5_u8, 50)
+                self.s.wid_list[0].setMaximum(min(ant.shape[0],post.shape[0])-1)
 
                 if self.group_mean.wid_list[2].wid_list[1].isChecked():
                     self.transfo_med()
@@ -215,7 +271,6 @@ class MyWindow(QMainWindow):
                 for i in range(1,6):
                     shifted_liv = ndimage.shift(self.mask_l, [i,0])
                     shifted_liv = closing(shifted_liv,disk(3))
-                    shifted_liv = np.ma.masked_where(shifted_liv==0, shifted_liv)
                     if np.sum(shifted_liv*self.mean_f64[im])>tot:
                         tot=np.sum(shifted_liv*self.mean_f64[im])
                         print('{} shifted to {}'.format(im, i))
@@ -249,11 +304,13 @@ class MyWindow(QMainWindow):
         self.group_mean.update_display(self.s.wid_list[0].value(), self.mask_l, self.mask_b,
         self.group_liver.get_trans(), self.group_blood.get_trans(), self.shift_list)
 
-    def show_curve(self):
+    def show_curve(self, show=True):
         if self.mask_l is not None and self.mask_b is not None:
-            graph(self.group_ant.getTimeStep(), self.mean_f64, self.mask_l,
+            plot = graph(self.group_ant.getTimeStep(), self.mean_f64, self.mask_l,
             self.mask_b, self.group_ant.getH(), self.group_ant.getW(), self.shift_list)
-        else:
+            if show: plt.show()
+            else: return(plot)
+        elif show:
             graph(self.group_ant.getTimeStep(), self.mean_f64, self.mask_l,
             self.mask_b, None, None, None)
 

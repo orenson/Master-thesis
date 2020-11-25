@@ -66,6 +66,25 @@ def update_plt_param():
     "figure.edgecolor": "#151515",
     "toolbar": "None"})
 
+def gird_shape(n):
+    if n==0: return((0,0))
+    if n==1: return((1,1))
+    elif n==2: return((1,2))
+    elif n==3: return((1,3))
+    elif n==4: return((2,2))
+    elif n==5 or n==6: return((2,3))
+    elif n==7 or n==8: return((2,4))
+    elif n==9: return((2,5))
+    elif n==10 or n==11 or n==12: return((3,4))
+    elif n==13 or n==14 or n==15: return((3,5))
+    elif n==16 or n==17 or n==18: return((3,6))
+    elif n==19 or n==20: return((4,5))
+    elif n==21 or n==22 or n==23 or n==24: return((4,6))
+    elif n==25 or n==26 or n==27 or n==28: return((4,7))
+    elif n==29 or n==30 or n==31 or n==32: return((4,8))
+    elif n==33 or n==34 or n==35: return((5,7))
+    elif n==36: return((5,8))
+
 def match_file(file_list):
     pairs = []
     list_copy = file_list.copy()
@@ -79,7 +98,7 @@ def match_file(file_list):
             if list_copy[i]==list_copy[j]:
                 pairs.append([i,j,list_copy[i].split('_')[-1].split('.')[0]])
     return(pairs)
-    
+
 
 def liv_utr(ft1, ft2, lt1, lt2, ct1, ct2, t1, t2, tdemi):
     bcl = 0.693147/tdemi
@@ -95,7 +114,7 @@ def bsa(height, weight):
     return(bsa)
 
 
-def graph(time_step, img_stack, liver_mask, blood_mask, h, w, shift):
+def time_series(time_step, img_stack, liver_mask, blood_mask, shift):
     time_series = []
     for img in range(len(img_stack)):
         time_series.append([0,0,0])
@@ -104,7 +123,7 @@ def graph(time_step, img_stack, liver_mask, blood_mask, h, w, shift):
             print('shifted mask for calcul')
             shifted_mask = ndimage.shift(liver_mask, [shift[img],0])
             shifted_mask = closing(shifted_mask,disk(3))
-            shifted_mask = np.ma.masked_where(shifted_mask==0, shifted_mask)
+            #shifted_mask = np.ma.masked_where(shifted_mask==0, shifted_mask)
         for i in range(len(img_stack[img])):
             for j in range(len(img_stack[img,i])):
                 if shifted_mask is not None and shifted_mask[i,j]:
@@ -121,8 +140,12 @@ def graph(time_step, img_stack, liver_mask, blood_mask, h, w, shift):
     lt = [time_series[i][0]*corr_factor[i] for i in range(len(time_series))]
     ct = [time_series[i][1]*corr_factor[i] for i in range(len(time_series))]
     ft = [time_series[i][2]*corr_factor[i] for i in range(len(time_series))]
+    return(lt,ct,ft,time_steps)
 
-    plt.figure(figsize=[10,5])
+
+def graph(time_step, img_stack, liver_mask, blood_mask, h, w, shift):
+    lt, ct, ft, time_steps = time_series(time_step, img_stack, liver_mask, blood_mask, shift)
+    fig = plt.figure(figsize=[10,5])
     plt.xlabel('Time (sec)')
     plt.ylabel('Gamma event count')
     if liver_mask is not None:
@@ -151,4 +174,4 @@ def graph(time_step, img_stack, liver_mask, blood_mask, h, w, shift):
     plt.grid(linewidth=1)
     plt.tight_layout()
     plt.legend()
-    plt.show()
+    return(fig)
