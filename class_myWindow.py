@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QRadioButton, QSlider, QLabel, QMessageBox
+from PyQt5.QtWidgets import QRadioButton, QSlider, QLabel, QMessageBox, QFileDialog
 from PyQt5.QtWidgets import QMainWindow, QWidget, QPushButton, QInputDialog
-from func import f64_2_u8, aryth_avg, update_plt_param, graph, gird_shape
+from func import f64_2_u8, aryth_avg, update_plt_param, graph, gird_shape, time_series
 from skimage.morphology import disk, closing
 from matplotlib import cm, pyplot as plt
 from class_groupParam import Group_param
@@ -21,7 +21,7 @@ class MyWindow(QMainWindow):
     def __init__(self, path_ant=None, path_post=None):
         super(MyWindow, self).__init__()
         self.setWindowTitle("Hepatobiliary scintigraphy image processing")
-        self.setFixedSize(1393, 796)
+        self.setFixedSize(1400, 773)
         centralwidget = QWidget(self)
         self.computed = False
         self.mask_l = None
@@ -32,7 +32,7 @@ class MyWindow(QMainWindow):
         plt.ion()
 
         self.s = HLayout(centralwidget, [QSlider(), QLabel()], [None,'0'])
-        self.s.setGeometry(150, 520, 451, 61)
+        self.s.setGeometry(150, 510, 451, 61)
         self.s.wid_list[0].setMaximum(35)
         self.s.wid_list[0].setOrientation(QtCore.Qt.Horizontal)
         self.s.wid_list[0].valueChanged['int'].connect(self.s.wid_list[1].setNum)
@@ -42,7 +42,7 @@ class MyWindow(QMainWindow):
         self.group_ant.add_widget(QPushButton(), 'Select')
         self.group_post = GroupImg(centralwidget, "Posterior projection", 380, 10, 370, 419, self.s.wid_list[0], True)
         self.group_post.add_widget(QPushButton(), 'Select')
-        self.group_mean = GroupImg(centralwidget, "Gmean dataset", 755, 10, 632, 780, self.s.wid_list[0])
+        self.group_mean = GroupImg(centralwidget, "Gmean dataset", 755, 10, 639, 757, self.s.wid_list[0])
         filters = HLayout(self.group_mean,[QRadioButton() for i in range(3)],['Raw','Median filter','Negative'],(90,0,0,0))
         filters.setMaximumHeight(33)
         filters.wid_list[0].setChecked(True)
@@ -50,15 +50,18 @@ class MyWindow(QMainWindow):
         self.group_mean.wid_list[-1].wid_list[0].clicked.connect(self.transfo_raw)
         self.group_mean.wid_list[-1].wid_list[1].clicked.connect(self.transfo_med)
         self.group_mean.wid_list[-1].wid_list[2].clicked.connect(self.transfo_inv)
-        self.group_mean.add_widget(QPushButton(), 'Compute geometric mean')
-        self.group_mean.wid_list[-1].clicked.connect(self.compute_mean)
-        self.group_mean.add_widget(QPushButton(), 'Show time-activity curve')
-        self.group_mean.add_widget(QPushButton(), 'Save parameters')
-        self.s.wid_list[0].valueChanged['int'].connect(self.call_update_display)
+        mean_l1 = HLayout(self.group_mean,[QPushButton(), QPushButton()],['Compute geometric mean', 'Show time-activity curve'],(0,0,0,0))
+        mean_l1.setMaximumHeight(24)
+        self.group_mean.add_widget(mean_l1)
+        self.group_mean.wid_list[-1].wid_list[0].clicked.connect(self.compute_mean)
+        mean_l2 = HLayout(self.group_mean,[QPushButton(), QPushButton()],['Save parameters', 'Export'],(0,0,0,0))
+        mean_l2.setMaximumHeight(24)
+        self.group_mean.add_widget(mean_l2)
 
-        self.group_liver = Group_param(centralwidget, 'Liver detection', 5, 620, 370, 170)
+        self.s.wid_list[0].valueChanged['int'].connect(self.call_update_display)
+        self.group_liver = Group_param(centralwidget, 'Liver detection', 5, 577, 370, 190)
         self.group_liver.clicked.connect(self.liver_check)
-        self.group_blood = Group_param(centralwidget, 'Blood pool detection', 380, 620, 370, 170)
+        self.group_blood = Group_param(centralwidget, 'Blood pool detection', 380, 577, 370, 190)
         self.group_blood.clicked.connect(self.blood_check)
 
         self.setCentralWidget(centralwidget)
@@ -111,9 +114,11 @@ class MyWindow(QMainWindow):
             else: self.group_blood.setChecked(True)
             self.blood_check()
         elif event.key()==QtCore.Qt.Key_C:
-            if self.computed:
-                self.win = ScreenshotWindow(self.group_ant.getImg().shape[0])
+            if self.computed: self.export_screenshot()
+            '''self.win = ScreenshotWindow(self.group_ant.getImg().shape[0])
                 if self.win.exec_():
+                    #self.win.generate_img(self.mean_f64, self.mask_l, self.mask_b, self.shift_list,
+                    #self.group_ant.getH(), self.group_ant.getW(), self.group_ant.getTimeStep())
                     selection, res, view, fname = self.win.get_info()
                     if len(selection)>0 and res:
                         prefix = fname.split('.png')[0]
@@ -138,7 +143,7 @@ class MyWindow(QMainWindow):
                             plt.savefig(fname1, bbox_inches='tight')
                             plt.close()
                             if view:
-                                plt.figure(1,figsize=[8,5])
+                                plt.figure(1,figsize=[9,5])
                                 plt.axis('off')
                                 plt.tight_layout()
                                 plt.imshow(mpimg.imread(fname1))
@@ -148,13 +153,13 @@ class MyWindow(QMainWindow):
                             plot.savefig(fname2, bbox_inches='tight')
                             plt.close()
                             if view:
-                                plt.figure(2,figsize=[8,5])
+                                plt.figure(2,figsize=[9,5])
                                 plt.axis('off')
                                 plt.tight_layout()
                                 plt.imshow(mpimg.imread(fname2))
                         else: QMessageBox(QMessageBox.Warning, "Error",
                         "Plot failed, both masks sould be selected to generate results").exec_()
-                    if view: plt.show()
+                    if view: plt.show()'''
 
         else:
             super().keyPressEvent(event)
@@ -177,8 +182,8 @@ class MyWindow(QMainWindow):
                 avg_first5_f64 = aryth_avg(self.mean_f64[2:6])
                 self.avg_first5_u8 = f64_2_u8(avg_first5_f64)
 
-                self.group_liver.mask_init(self.avg_last10_u8)
-                self.group_blood.mask_init(self.avg_first5_u8, 50)
+                self.group_liver.mask_init(self.avg_last10_u8, len(self.mean_f64))
+                self.group_blood.mask_init(self.avg_first5_u8, len(self.mean_f64), 50)
                 self.s.wid_list[0].setMaximum(min(ant.shape[0],post.shape[0])-1)
 
                 if self.group_mean.wid_list[2].wid_list[1].isChecked():
@@ -195,8 +200,9 @@ class MyWindow(QMainWindow):
                     self.group_blood.l1.wid_list[1].valueChanged['int'].connect(self.blood_check)
                     self.group_blood.l2.wid_list[1].valueChanged['int'].connect(self.blood_check)
                     self.group_blood.l3.wid_list[1].valueChanged['int'].connect(self.blood_check)
-                    self.group_mean.wid_list[-1].clicked.connect(self.save)
-                    self.group_mean.wid_list[-2].clicked.connect(self.show_curve)
+                    self.group_mean.wid_list[-1].wid_list[0].clicked.connect(self.save)
+                    self.group_mean.wid_list[-1].wid_list[1].clicked.connect(self.export)
+                    self.group_mean.wid_list[-2].wid_list[1].clicked.connect(lambda :self.show_curve(show=True))
                     self.computed = True
                     self.group_liver.l1.wid_list[1].sliderReleased.connect(self.respi)
                     self.group_liver.l2.wid_list[1].sliderReleased.connect(self.respi)
@@ -311,8 +317,80 @@ class MyWindow(QMainWindow):
             if show: plt.show()
             else: return(plot)
         elif show:
-            graph(self.group_ant.getTimeStep(), self.mean_f64, self.mask_l,
-            self.mask_b, None, None, None)
+            plot = graph(self.group_ant.getTimeStep(), self.mean_f64, self.mask_l,
+            self.mask_b, None, None, self.shift_list)
+            plt.show()
+
+
+    def export(self):
+        items = ("Raw times series (.csv)", "Screenshot (.png)", "Dicom file (.dcm)")
+        item, ok_pressed = QInputDialog.getItem(self, "Export",
+         "Select exportation format", items, 1)
+
+        if ok_pressed:
+            if item == "Raw times series (.csv)": self.export_raw()
+            elif item == "Screenshot (.png)": self.export_screenshot()
+            elif item == "Dicom file (.dcm)": pass
+
+
+    def export_raw(self):
+        if self.mask_l is not None and self.mask_b is not None:
+            lt, ct, ft, time_steps = time_series(self.group_ant.getTimeStep(),
+            self.mean_f64, self.mask_l, self.mask_b, self.shift_list)
+            options = QFileDialog.Options()
+            options |= QFileDialog.DontUseNativeDialog
+            fname, _ = QFileDialog.getSaveFileName(self,"Save as","RawData.csv","All (.*)", options=options)
+            with open(fname, "w") as f:
+                f.write('#time, liver_count, blood_count, full_count\n')
+                for i in range(len(time_steps)):
+                    f.write('{},{},{},{}\n'.format(time_steps[i], lt[i], ct[i], ft[i]))
+        else: QMessageBox(QMessageBox.Warning, "Error","Both mask sould be checked").exec_()
+
+
+    def export_screenshot(self):
+        self.win = ScreenshotWindow(self.group_ant.getImg().shape[0])
+        if self.win.exec_():
+            selection, res, view, fname = self.win.get_info()
+            if len(selection)>0 and res:
+                prefix = fname.split('.png')[0]
+                fname1 = prefix+'_slices.png'
+                fname2 = prefix+'_timeSeries.png'
+            else: fname1 = fname2 = fname
+            gird_y, gird_x = gird_shape(len(selection))
+            #plt.figure(figsize=[12,7])
+            for i in range(len(selection)):
+                plt.subplot(gird_y,gird_x,i+1)
+                plt.axis('off')
+                plt.title("Mean {}".format(selection[i]), fontdict={'fontsize': 8})
+                plt.imshow(self.mean_f64[selection[i]-1],cmap=plt.cm.gray)
+                mask_liv, mask_blo = self.group_mean.update_display(i,
+                self.mask_l, self.mask_b,0, 0, self.shift_list, apply=False)
+                if self.mask_l is not None:
+                    plt.imshow(mask_liv, cmap='coolwarm', interpolation="nearest")
+                if self.mask_b is not None:
+                    plt.imshow(mask_blo, cmap='RdYlBu', interpolation="nearest")
+                if i==len(selection)-1:
+                    plt.tight_layout()
+                    plt.savefig(fname1, bbox_inches='tight')
+                    plt.close()
+                    if view:
+                        plt.figure(1,figsize=[9,5])
+                        plt.axis('off')
+                        plt.tight_layout()
+                        plt.imshow(mpimg.imread(fname1))
+            if res:
+                if self.mask_l is not None and self.mask_b is not None:
+                    plot = self.show_curve(show=False)
+                    plot.savefig(fname2, bbox_inches='tight')
+                    plt.close()
+                    if view:
+                        plt.figure(2,figsize=[9,5])
+                        plt.axis('off')
+                        plt.tight_layout()
+                        plt.imshow(mpimg.imread(fname2))
+                else: QMessageBox(QMessageBox.Warning, "Error",
+                "Plot failed, both masks sould be selected to generate results").exec_()
+            if view: plt.show()
 
     def save(self):
         scinty_id = self.group_ant.getPath().split('/')[-1].split('_')[-1].split('.')[0]

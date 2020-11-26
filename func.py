@@ -3,7 +3,7 @@ from skimage.morphology import disk, closing
 from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.integrate import trapz
-from scipy import ndimage
+from skimage import transform
 from math import exp
 import numpy as np
 
@@ -118,17 +118,15 @@ def time_series(time_step, img_stack, liver_mask, blood_mask, shift):
     time_series = []
     for img in range(len(img_stack)):
         time_series.append([0,0,0])
-        shifted_mask=None
-        if shift and shift[img]:
+        liver_mask_copy = liver_mask.copy()
+        if liver_mask_copy is not None and shift is not None and shift[img]:
             print('shifted mask for calcul')
-            shifted_mask = ndimage.shift(liver_mask, [shift[img],0])
-            shifted_mask = closing(shifted_mask,disk(3))
-            #shifted_mask = np.ma.masked_where(shifted_mask==0, shifted_mask)
+            matrix = transform.EuclideanTransform(translation=(0,shift[img]))
+            liver_mask_copy = transform.warp(liver_mask_copy, matrix.inverse)
+
         for i in range(len(img_stack[img])):
             for j in range(len(img_stack[img,i])):
-                if shifted_mask is not None and shifted_mask[i,j]:
-                    time_series[-1][0] += img_stack[img,i,j]
-                elif liver_mask is not None and shifted_mask is None and liver_mask[i,j]:
+                if liver_mask_copy is not None and liver_mask_copy[i,j]:
                     time_series[-1][0] += img_stack[img,i,j]
                 if blood_mask is not None and blood_mask[i,j]:
                     time_series[-1][1] += img_stack[img,i,j]

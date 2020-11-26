@@ -15,7 +15,7 @@ class Group_param(QGroupBox):
     def __init__(self, parent, title, x, y, w, h):
         super(Group_param, self).__init__(parent)
         self.papa = parent
-        #self.pos = (x,y,w,h)
+        self.shift_list = None
         self.setGeometry(x,y,w,h)
         self.setAlignment(QtCore.Qt.AlignCenter)
         self.setTitle(title)
@@ -55,7 +55,8 @@ class Group_param(QGroupBox):
         self.setLayout(vLayout)
 
 
-    def mask_init(self, avg, thresh_shift=0):
+    def mask_init(self, avg, n, thresh_shift=0):
+        self.shift_list = [[0,0] for i in range(n)]
         self.avg = avg
         self.med = median(self.avg, disk(2))
         self.thresh = threshold_otsu(self.med)+thresh_shift
@@ -79,12 +80,14 @@ class Group_param(QGroupBox):
             for i in range(len(priority)):
                 for j in range(len(priority[i])):
                     if priority[i,j]: self.mask[i,j]=0
-
         return(self.mask)
 
 
     def get_trans(self):
         return(self.l3.wid_list[1].value()/10)
+
+    def get_shift(self):
+        return(self.shift_list)
 
 
     def show_process(self):
