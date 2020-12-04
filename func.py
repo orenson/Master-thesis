@@ -85,6 +85,7 @@ def gird_shape(n):
     elif n==33 or n==34 or n==35: return((5,7))
     elif n==36: return((5,8))
 
+
 def match_file(file_list):
     pairs = []
     list_copy = file_list.copy()
@@ -114,22 +115,25 @@ def bsa(height, weight):
     return(bsa)
 
 
-def time_series(time_step, img_stack, liver_mask, blood_mask, shift):
+def time_series(time_step, img_stack, liver_mask, blood_mask, shift_l, shift_b):
     time_series = []
     for img in range(len(img_stack)):
         time_series.append([0,0,0])
         liver_mask_copy = liver_mask.copy()
-        if liver_mask_copy is not None and shift is not None and shift[img]:
-            print('shifted mask for calcul')
-            matrix = transform.EuclideanTransform(translation=(0,shift[img]))
-            liver_mask_copy = transform.warp(liver_mask_copy, matrix.inverse)
+        blood_mask_copy = blood_mask.copy()
 
-        for i in range(len(img_stack[img])):
-            for j in range(len(img_stack[img,i])):
-                if liver_mask_copy is not None and liver_mask_copy[i,j]:
-                    time_series[-1][0] += img_stack[img,i,j]
-                if blood_mask is not None and blood_mask[i,j]:
-                    time_series[-1][1] += img_stack[img,i,j]
+        if liver_mask_copy is not None and shift_l is not None and shift_l[img]:
+            #print('shifted mask for calcul')
+            matrix = transform.EuclideanTransform(translation=(shift_l[img][0],shift_l[img][1]))
+            liver_mask_copy = transform.warp(liver_mask_copy, matrix.inverse)
+        if blood_mask_copy is not None and shift_b is not None and shift_b[img]:
+            matrix = transform.EuclideanTransform(translation=(shift_b[img][0],shift_b[img][1]))
+            blood_mask_copy = transform.warp(blood_mask_copy, matrix.inverse)
+
+        if liver_mask_copy is not None:
+            time_series[-1][0] = np.sum(img_stack[img]*liver_mask_copy)
+        if blood_mask_copy is not None:
+            time_series[-1][1] = np.sum(img_stack[img]*blood_mask_copy)
         time_series[-1][2] = np.sum(img_stack[img])
 
     time_steps = np.array([float(time_step)*(i+1) for i in range(len(time_series))])
@@ -141,8 +145,8 @@ def time_series(time_step, img_stack, liver_mask, blood_mask, shift):
     return(lt,ct,ft,time_steps)
 
 
-def graph(time_step, img_stack, liver_mask, blood_mask, h, w, shift):
-    lt, ct, ft, time_steps = time_series(time_step, img_stack, liver_mask, blood_mask, shift)
+def graph(time_step, img_stack, liver_mask, blood_mask, h, w, shift_l, shift_b):
+    lt, ct, ft, time_steps = time_series(time_step, img_stack, liver_mask, blood_mask, shift_l, shift_b)
     fig = plt.figure(figsize=[10,5])
     plt.xlabel('Time (sec)')
     plt.ylabel('Gamma event count')

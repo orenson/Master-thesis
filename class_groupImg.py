@@ -104,13 +104,16 @@ class GroupImg(QGroupBox):
             self.l3.wid_list[0].setText(genre+'  '+age+'  '+self.weight+'  '+self.size)
             self.l3.wid_list[1].setText(frames+' x '+col+' x '+rows)
             self.l4.wid_list[0].setText(process_date(date))
-            self.update_display(0, None, None, 0.5, 0.5, None)
+            self.update_display(0, None, None, 0.5, 0.5, None, None)
 
 
-    def update_display(self, i, mask_l, mask_b, transpa_l, transpa_b, shift, apply=True):
-        if mask_l is not None and shift and shift[i]:
-            matrix = transform.EuclideanTransform(translation=(0,shift[i]))
+    def update_display(self, i, mask_l, mask_b, transpa_l, transpa_b, shift_l, shift_b, apply=True):
+        if mask_l is not None and shift_l is not None:
+            matrix = transform.EuclideanTransform(translation=(shift_l[i][0],shift_l[i][1]))
             mask_l = transform.warp(mask_l, matrix.inverse)
+        if mask_b is not None and shift_b is not None:
+            matrix = transform.EuclideanTransform(translation=(shift_b[i][0],shift_b[i][1]))
+            mask_b = transform.warp(mask_b, matrix.inverse)
         if transpa_l == 0 and mask_l is not None:
             mask_l = canny(mask_l)
             transpa_l = 1

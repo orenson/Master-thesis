@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QGroupBox, QPushButton, QVBoxLayout, QLabel, QSlider, QCheckBox
-from skimage.morphology import erosion, dilation, closing
+from skimage.morphology import erosion, dilation, closing, opening
 from skimage.filters import threshold_otsu
 from skimage.filters.rank import median
 from matplotlib import pyplot as plt
@@ -47,6 +47,10 @@ class Group_param(QGroupBox):
         vLayout.addWidget(self.l3)
         self.l4=HLayout(self, [QCheckBox(),QPushButton(),QPushButton(),QPushButton(),
         QPushButton()],['All','Left','Up','Down','Right'], (0,0,0,0))
+        self.l4.wid_list[1].setAutoRepeat(True)
+        self.l4.wid_list[2].setAutoRepeat(True)
+        self.l4.wid_list[3].setAutoRepeat(True)
+        self.l4.wid_list[4].setAutoRepeat(True)
         #self.l4.wid_list[1].valueChanged['int'].connect(self.l3.wid_list[2].setNum)
         vLayout.addWidget(self.l4)
         process = QPushButton('Show build process')
@@ -70,6 +74,7 @@ class Group_param(QGroupBox):
         self.thresh = thresh
         self.mask = self.med > self.thresh
         self.mask = closing(self.mask, disk(3))
+        #self.mask = opening(self.mask, disk(3))
         if morpho>0: self.mask = dilation(self.mask, disk(morpho))
         elif morpho<0: self.mask = erosion(self.mask, disk(-morpho))
 
@@ -83,8 +88,19 @@ class Group_param(QGroupBox):
         return(self.mask)
 
 
+    def update_shift(self,l,r,u,d,i):
+        if not self.l4.wid_list[0].isChecked():
+            self.shift_list[i][0] += (-l+r)
+            self.shift_list[i][1] += (-u+d)
+        elif self.l4.wid_list[0].isChecked():
+            for j in range(len(self.shift_list)):
+                self.shift_list[j][0] += (-l+r)
+                self.shift_list[j][1] += (-u+d)
+
+
     def get_trans(self):
         return(self.l3.wid_list[1].value()/10)
+
 
     def get_shift(self):
         return(self.shift_list)

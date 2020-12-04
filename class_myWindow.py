@@ -11,11 +11,12 @@ from class_hLayout import HLayout
 from class_groupImg import GroupImg
 from class_screenshot import ScreenshotWindow
 from skimage.draw import ellipse
+from skimage import transform
 from PyQt5.QtCore import Qt
-from scipy import ndimage
+from datetime import date
+import pydicom as pd
 import numpy as np
 import os
-
 
 class MyWindow(QMainWindow):
     def __init__(self, path_ant=None, path_post=None):
@@ -26,9 +27,8 @@ class MyWindow(QMainWindow):
         self.computed = False
         self.mask_l = None
         self.mask_b = None
-        self.shift_list = None
         self.ell = np.zeros((128, 128), dtype=np.bool)
-        self.ell[ellipse(45, 66, 20, 25, rotation=np.deg2rad(0))] = 1
+        self.ell[ellipse(52, 66, 30, 25, rotation=np.deg2rad(0))] = 1
         plt.ion()
 
         self.s = HLayout(centralwidget, [QSlider(), QLabel()], [None,'0'])
@@ -65,14 +65,6 @@ class MyWindow(QMainWindow):
         self.group_blood.clicked.connect(self.blood_check)
 
         self.setCentralWidget(centralwidget)
-
-        #bar = self.menuBar()
-        #bar.setNativeMenuBar(False)
-        #bar = QtGui.MenuBar()
-        #menuFile = bar.addMenu("File")
-        #exit = QtGui.QAction(QtGui.QIcon('images/app_icon.png'), 'Exit', self )
-        #menuFile.addAction(exit)
-
         #self.group_mean.wid_list[0].setCursor(Qt.SizeAllCursor)
         update_plt_param()
 
@@ -84,7 +76,6 @@ class MyWindow(QMainWindow):
             self.group_blood.setChecked(True)
             self.group_liver.l1.wid_list[1].setValue(self.group_liver.l1.wid_list[1].value()+1)
             self.group_liver.l1.wid_list[1].setValue(self.group_liver.l1.wid_list[1].value()-1)
-            self.respi()
 
 
     def keyPressEvent(self, event):
@@ -115,52 +106,6 @@ class MyWindow(QMainWindow):
             self.blood_check()
         elif event.key()==QtCore.Qt.Key_C:
             if self.computed: self.export_screenshot()
-            '''self.win = ScreenshotWindow(self.group_ant.getImg().shape[0])
-                if self.win.exec_():
-                    #self.win.generate_img(self.mean_f64, self.mask_l, self.mask_b, self.shift_list,
-                    #self.group_ant.getH(), self.group_ant.getW(), self.group_ant.getTimeStep())
-                    selection, res, view, fname = self.win.get_info()
-                    if len(selection)>0 and res:
-                        prefix = fname.split('.png')[0]
-                        fname1 = prefix+'_slices.png'
-                        fname2 = prefix+'_timeSeries.png'
-                    else: fname1 = fname2 = fname
-                    gird_y, gird_x = gird_shape(len(selection))
-                    #plt.figure(figsize=[12,7])
-                    for i in range(len(selection)):
-                        plt.subplot(gird_y,gird_x,i+1)
-                        plt.axis('off')
-                        plt.title("Mean {}".format(selection[i]), fontdict={'fontsize': 8})
-                        plt.imshow(self.mean_f64[selection[i]-1],cmap=plt.cm.gray)
-                        mask_liv, mask_blo = self.group_mean.update_display(i,
-                        self.mask_l, self.mask_b,0, 0, self.shift_list, apply=False)
-                        if self.mask_l is not None:
-                            plt.imshow(mask_liv, cmap='coolwarm', interpolation="nearest")
-                        if self.mask_b is not None:
-                            plt.imshow(mask_blo, cmap='RdYlBu', interpolation="nearest")
-                        if i==len(selection)-1:
-                            plt.tight_layout()
-                            plt.savefig(fname1, bbox_inches='tight')
-                            plt.close()
-                            if view:
-                                plt.figure(1,figsize=[9,5])
-                                plt.axis('off')
-                                plt.tight_layout()
-                                plt.imshow(mpimg.imread(fname1))
-                    if res:
-                        if self.mask_l is not None and self.mask_b is not None:
-                            plot = self.show_curve(show=False)
-                            plot.savefig(fname2, bbox_inches='tight')
-                            plt.close()
-                            if view:
-                                plt.figure(2,figsize=[9,5])
-                                plt.axis('off')
-                                plt.tight_layout()
-                                plt.imshow(mpimg.imread(fname2))
-                        else: QMessageBox(QMessageBox.Warning, "Error",
-                        "Plot failed, both masks sould be selected to generate results").exec_()
-                    if view: plt.show()'''
-
         else:
             super().keyPressEvent(event)
 
@@ -204,9 +149,24 @@ class MyWindow(QMainWindow):
                     self.group_mean.wid_list[-1].wid_list[1].clicked.connect(self.export)
                     self.group_mean.wid_list[-2].wid_list[1].clicked.connect(lambda :self.show_curve(show=True))
                     self.computed = True
-                    self.group_liver.l1.wid_list[1].sliderReleased.connect(self.respi)
-                    self.group_liver.l2.wid_list[1].sliderReleased.connect(self.respi)
-                    #self.group_liver.clicked.connect(self.respi)
+
+                    self.group_liver.l4.wid_list[1].clicked.connect(lambda :(self.group_liver.\
+                    update_shift(1,0,0,0,self.s.wid_list[0].value()), self.call_update_display(self.s.wid_list[0].value())))
+                    self.group_liver.l4.wid_list[2].clicked.connect(lambda :(self.group_liver.\
+                    update_shift(0,0,1,0,self.s.wid_list[0].value()), self.call_update_display(self.s.wid_list[0].value())))
+                    self.group_liver.l4.wid_list[3].clicked.connect(lambda :(self.group_liver.\
+                    update_shift(0,0,0,1,self.s.wid_list[0].value()), self.call_update_display(self.s.wid_list[0].value())))
+                    self.group_liver.l4.wid_list[4].clicked.connect(lambda :(self.group_liver.\
+                    update_shift(0,1,0,0,self.s.wid_list[0].value()), self.call_update_display(self.s.wid_list[0].value())))
+
+                    self.group_blood.l4.wid_list[1].clicked.connect(lambda :(self.group_blood.\
+                    update_shift(1,0,0,0,self.s.wid_list[0].value()), self.call_update_display(self.s.wid_list[0].value())))
+                    self.group_blood.l4.wid_list[2].clicked.connect(lambda :(self.group_blood.\
+                    update_shift(0,0,1,0,self.s.wid_list[0].value()), self.call_update_display(self.s.wid_list[0].value())))
+                    self.group_blood.l4.wid_list[3].clicked.connect(lambda :(self.group_blood.\
+                    update_shift(0,0,0,1,self.s.wid_list[0].value()), self.call_update_display(self.s.wid_list[0].value())))
+                    self.group_blood.l4.wid_list[4].clicked.connect(lambda :(self.group_blood.\
+                    update_shift(0,1,0,0,self.s.wid_list[0].value()), self.call_update_display(self.s.wid_list[0].value())))
 
                 scinty_id = self.group_ant.getPath().split('/')[-1].split('_')[-1].split('.')[0]
                 directory = '/'.join(self.group_ant.getPath().split('/')[:-1])+'/'
@@ -242,8 +202,8 @@ class MyWindow(QMainWindow):
         if self.computed and self.group_liver.isChecked():
             self.mask_l = self.group_liver.build_mask(thresh, morpho)
             if self.group_blood.isChecked(): self.blood_check()
-            else: self.group_mean.update_display(self.s.wid_list[0].value(), self.mask_l,
-            None, self.group_liver.get_trans(), self.group_blood.get_trans(), self.shift_list)
+            else: self.group_mean.update_display(self.s.wid_list[0].value(),self.mask_l,None,
+            self.group_liver.get_trans(), self.group_blood.get_trans(),self.group_liver.get_shift(), self.group_blood.get_shift())
 
         elif self.computed and not self.group_liver.isChecked():
             self.mask_l = None
@@ -259,38 +219,43 @@ class MyWindow(QMainWindow):
             else: self.mask_b = self.group_blood.build_mask(thresh, morpho, None, self.ell)
             i = self.s.wid_list[0].value()
             if not self.group_liver.isChecked():
-                self.group_mean.update_display(i, None , self.mask_b,
-                self.group_liver.get_trans(), self.group_blood.get_trans(), self.shift_list)
+                self.group_mean.update_display(i, None , self.mask_b, self.group_liver.get_trans(),
+                self.group_blood.get_trans(), self.group_liver.get_shift(), self.group_blood.get_shift())
             else:
-                self.group_mean.update_display(i, self.mask_l, self.mask_b,
-                self.group_liver.get_trans(), self.group_blood.get_trans(), self.shift_list)
+                self.group_mean.update_display(i, self.mask_l, self.mask_b, self.group_liver.get_trans(),
+                self.group_blood.get_trans(), self.group_liver.get_shift(), self.group_blood.get_shift())
         elif self.computed and not self.group_blood.isChecked():
             self.mask_b = None
             self.call_update_display(self.s.wid_list[0].value())
 
     def respi(self):
-        print('released')
-        if self.mask_l is not None and self.group_liver.isChecked():
-            self.shift_list = [0 for i in range(len(self.mean_f64))]
-            for im in range(len(self.mean_f64)):
-                tot = np.sum(self.mask_l*self.mean_f64[im])
-                for i in range(1,6):
-                    shifted_liv = ndimage.shift(self.mask_l, [i,0])
-                    shifted_liv = closing(shifted_liv,disk(3))
-                    if np.sum(shifted_liv*self.mean_f64[im])>tot:
-                        tot=np.sum(shifted_liv*self.mean_f64[im])
-                        print('{} shifted to {}'.format(im, i))
-                        self.shift_list[im]=i
+        print('respi check')
+        thresh = self.group_liver.l1.wid_list[1].value()
+        morpho = self.group_liver.l2.wid_list[1].value()
+        mask_l = self.group_liver.build_mask(thresh, morpho)
+        shift = [0 for i in range(len(self.mean_f64))]
+        for im in range(5,len(self.mean_f64)):
+            tot = np.sum(mask_l*self.mean_f64[im])
+            for i in range(1,6):
+                matrix = transform.EuclideanTransform(translation=(0,i))
+                shifted_liv = transform.warp(mask_l, matrix.inverse)
+                if np.sum(shifted_liv*self.mean_f64[im])>tot:
+                    tot=np.sum(shifted_liv*self.mean_f64[im])
+                    print('{} shifted to {}'.format(im, i))
+                    shift[im]=i
+
+        for i in range(len(shift)):
+            if shift[i]: self.group_liver.update_shift(0,0,0,shift[i],i)
 
 
     def call_update_display(self, i):
         if self.group_ant.getImg() is not None:
-            self.group_ant.update_display(i, None, None, None, None, None)
+            self.group_ant.update_display(i, None, None, None, None, None, None)
         if self.group_post.getImg() is not None:
-            self.group_post.update_display(i, None, None, None, None, None)
+            self.group_post.update_display(i, None, None, None, None, None, None)
         if self.computed:
-            self.group_mean.update_display(i, self.mask_l, self.mask_b,
-            self.group_liver.get_trans(), self.group_blood.get_trans(), self.shift_list)
+            self.group_mean.update_display(i, self.mask_l, self.mask_b,self.group_liver.get_trans(),
+            self.group_blood.get_trans(), self.group_liver.get_shift(), self.group_blood.get_shift())
 
     def transfo_med(self):
         to_display = self.mean_u8.copy()
@@ -298,27 +263,29 @@ class MyWindow(QMainWindow):
             to_display[i] = median(self.mean_u8[i], disk(1))
         self.group_mean.setImg(to_display)
         self.group_mean.update_display(self.s.wid_list[0].value(), self.mask_l, self.mask_b,
-        self.group_liver.get_trans(), self.group_blood.get_trans(), self.shift_list)
+        self.group_liver.get_trans(), self.group_blood.get_trans(),self.group_liver.get_shift(), self.group_blood.get_shift())
 
     def transfo_inv(self):
         self.group_mean.setImg(np.invert(self.mean_u8))
-        self.group_mean.update_display(self.s.wid_list[0].value(), self.mask_l, self.mask_b,
-        self.group_liver.get_trans(), self.group_blood.get_trans(), self.shift_list)
+        self.group_mean.update_display(self.s.wid_list[0].value(), self.mask_l,
+        self.mask_b,self.group_liver.get_trans(), self.group_blood.get_trans(),
+        self.group_liver.get_shift(), self.group_blood.get_shift())
 
     def transfo_raw(self):
         self.group_mean.setImg(self.mean_u8)
-        self.group_mean.update_display(self.s.wid_list[0].value(), self.mask_l, self.mask_b,
-        self.group_liver.get_trans(), self.group_blood.get_trans(), self.shift_list)
+        self.group_mean.update_display(self.s.wid_list[0].value(), self.mask_l,
+        self.mask_b,self.group_liver.get_trans(), self.group_blood.get_trans(),
+        self.group_liver.get_shift(), self.group_blood.get_shift())
 
     def show_curve(self, show=True):
         if self.mask_l is not None and self.mask_b is not None:
             plot = graph(self.group_ant.getTimeStep(), self.mean_f64, self.mask_l,
-            self.mask_b, self.group_ant.getH(), self.group_ant.getW(), self.shift_list)
+            self.mask_b, self.group_ant.getH(), self.group_ant.getW(), self.group_liver.get_shift(), self.group_blood.get_shift())
             if show: plt.show()
             else: return(plot)
         elif show:
             plot = graph(self.group_ant.getTimeStep(), self.mean_f64, self.mask_l,
-            self.mask_b, None, None, self.shift_list)
+            self.mask_b, None, None, self.group_liver.get_shift(), self.group_blood.get_shift())
             plt.show()
 
 
@@ -330,26 +297,29 @@ class MyWindow(QMainWindow):
         if ok_pressed:
             if item == "Raw times series (.csv)": self.export_raw()
             elif item == "Screenshot (.png)": self.export_screenshot()
-            elif item == "Dicom file (.dcm)": pass
+            elif item == "Dicom file (.dcm)": self.export_dicom()
 
 
     def export_raw(self):
         if self.mask_l is not None and self.mask_b is not None:
             lt, ct, ft, time_steps = time_series(self.group_ant.getTimeStep(),
-            self.mean_f64, self.mask_l, self.mask_b, self.shift_list)
+            self.mean_f64, self.mask_l, self.mask_b, self.group_liver.get_shift(), self.group_blood.get_shift())
             options = QFileDialog.Options()
             options |= QFileDialog.DontUseNativeDialog
             fname, _ = QFileDialog.getSaveFileName(self,"Save as","RawData.csv","All (.*)", options=options)
-            with open(fname, "w") as f:
-                f.write('#time, liver_count, blood_count, full_count\n')
-                for i in range(len(time_steps)):
-                    f.write('{},{},{},{}\n'.format(time_steps[i], lt[i], ct[i], ft[i]))
+            if fname:
+                with open(fname, "w") as f:
+                    f.write('#time, liver_count, blood_count, full_count\n')
+                    for i in range(len(time_steps)):
+                        f.write('{},{},{},{}\n'.format(time_steps[i], lt[i], ct[i], ft[i]))
         else: QMessageBox(QMessageBox.Warning, "Error","Both mask sould be checked").exec_()
 
 
     def export_screenshot(self):
         self.win = ScreenshotWindow(self.group_ant.getImg().shape[0])
         if self.win.exec_():
+            #self.win.generate_img(self.mean_f64, self.mask_l, self.mask_b, self.group_liver.get_shift(), self.group_blood.get_shift(),
+            #self.group_ant.getH(), self.group_ant.getW(), self.group_ant.getTimeStep())
             selection, res, view, fname = self.win.get_info()
             if len(selection)>0 and res:
                 prefix = fname.split('.png')[0]
@@ -363,8 +333,8 @@ class MyWindow(QMainWindow):
                 plt.axis('off')
                 plt.title("Mean {}".format(selection[i]), fontdict={'fontsize': 8})
                 plt.imshow(self.mean_f64[selection[i]-1],cmap=plt.cm.gray)
-                mask_liv, mask_blo = self.group_mean.update_display(i,
-                self.mask_l, self.mask_b,0, 0, self.shift_list, apply=False)
+                mask_liv, mask_blo = self.group_mean.update_display(selection[i]-1,self.mask_l, self.mask_b,
+                0, 0, self.group_liver.get_shift(), self.group_blood.get_shift(), apply=False)
                 if self.mask_l is not None:
                     plt.imshow(mask_liv, cmap='coolwarm', interpolation="nearest")
                 if self.mask_b is not None:
@@ -391,6 +361,35 @@ class MyWindow(QMainWindow):
                 else: QMessageBox(QMessageBox.Warning, "Error",
                 "Plot failed, both masks sould be selected to generate results").exec_()
             if view: plt.show()
+
+
+    def export_dicom(self):
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        fname, _ = QFileDialog.getSaveFileName(self,"Save as","Export.dcm","All (.*)", options=options)
+        mean = np.round(self.mean_f64).astype(np.uint16)
+
+        if fname:
+            for img in range(len(mean)):
+                ma = np.amax(mean[img])
+                mask_liv, mask_blo = self.group_mean.update_display(img,self.mask_l, self.mask_b,
+                0, 0, self.group_liver.get_shift(), self.group_blood.get_shift(), apply=False)
+                for i in range(len(mean[img])):
+                    for j in range(len(mean[img,i])):
+                        if self.mask_l is not None and mask_liv[i,j]:
+                            mean[img,i,j] = ma
+                        if self.mask_b is not None and mask_blo[i,j]:
+                            mean[img,i,j] = ma
+
+            with pd.dcmread(self.group_ant.getPath()) as template:
+                template[0x0018, 0x0070].value = np.sum(mean)
+                template[0x0008,0x0012].value = date.today().strftime("%Y%m%d")
+                template[0x0008,0x103E].value = 'DYN FOIE GMEAN'
+                template.PixelData = mean.tobytes()
+                template.save_as(fname)
+
+
+
 
     def save(self):
         scinty_id = self.group_ant.getPath().split('/')[-1].split('_')[-1].split('.')[0]
