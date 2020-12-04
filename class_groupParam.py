@@ -62,7 +62,7 @@ class Group_param(QGroupBox):
     def mask_init(self, avg, n, thresh_shift=0):
         self.shift_list = [[0,0] for i in range(n)]
         self.avg = avg
-        self.med = median(self.avg, disk(2))
+        self.med = median(self.avg, disk(3))
         self.thresh = threshold_otsu(self.med)+thresh_shift
         self.l1.wid_list[1].setMaximum(255)
         self.l1.wid_list[1].setMinimum(0)
@@ -104,6 +104,10 @@ class Group_param(QGroupBox):
 
     def get_shift(self):
         return(self.shift_list)
+
+
+    def set_shift(self, l):
+        self.shift_list = l
 
 
     def show_process(self):

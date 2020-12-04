@@ -108,10 +108,10 @@ class GroupImg(QGroupBox):
 
 
     def update_display(self, i, mask_l, mask_b, transpa_l, transpa_b, shift_l, shift_b, apply=True):
-        if mask_l is not None and shift_l is not None:
+        if mask_l is not None and shift_l is not None and shift_l[i]:
             matrix = transform.EuclideanTransform(translation=(shift_l[i][0],shift_l[i][1]))
             mask_l = transform.warp(mask_l, matrix.inverse)
-        if mask_b is not None and shift_b is not None:
+        if mask_b is not None and shift_b is not None and shift_b[i]:
             matrix = transform.EuclideanTransform(translation=(shift_b[i][0],shift_b[i][1]))
             mask_b = transform.warp(mask_b, matrix.inverse)
         if transpa_l == 0 and mask_l is not None:

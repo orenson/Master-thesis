@@ -128,7 +128,7 @@ class MyWindow(QMainWindow):
                 self.avg_first5_u8 = f64_2_u8(avg_first5_f64)
 
                 self.group_liver.mask_init(self.avg_last10_u8, len(self.mean_f64))
-                self.group_blood.mask_init(self.avg_first5_u8, len(self.mean_f64), 50)
+                self.group_blood.mask_init(self.avg_first5_u8*self.ell, len(self.mean_f64), 50)
                 self.s.wid_list[0].setMaximum(min(ant.shape[0],post.shape[0])-1)
 
                 if self.group_mean.wid_list[2].wid_list[1].isChecked():
@@ -177,19 +177,29 @@ class MyWindow(QMainWindow):
                             if line.strip().split(',')[0]==scinty_id:
                                 found = True
                                 print('presets found')
-                                self.group_liver.l1.wid_list[1].setValue(int(line.strip().split(',')[1]))
-                                self.group_liver.l2.wid_list[1].setValue(int(line.strip().split(',')[2]))
-                                self.group_blood.l1.wid_list[1].setValue(int(line.strip().split(',')[3]))
-                                self.group_blood.l2.wid_list[1].setValue(int(line.strip().split(',')[4]))
-                                self.group_ant.setW(float(line.strip().split(',')[5]))
-                                self.group_ant.setH(float(line.strip().split(',')[6]))
-                self.respi()
+                                split = line.strip().split(',')
+                                self.group_liver.l1.wid_list[1].setValue(int(split[1]))
+                                self.group_liver.l2.wid_list[1].setValue(int(split[2]))
+                                self.group_blood.l1.wid_list[1].setValue(int(split[3]))
+                                self.group_blood.l2.wid_list[1].setValue(int(split[4]))
+                                self.group_ant.setW(float(split[5]))
+                                self.group_ant.setH(float(split[6]))
+                                shift_l = [int(i) for i in split[7:7+2*len(self.mean_f64)]]
+                                shift_b = [int(i) for i in split[7+2*len(self.mean_f64):7+4*len(self.mean_f64)]]
+                                shift_l = np.reshape(shift_l, (len(self.mean_f64), 2))
+                                shift_b = np.reshape(shift_b, (len(self.mean_f64), 2))
+                                self.group_liver.set_shift(shift_l.tolist())
+                                self.group_blood.set_shift(shift_b.tolist())
+
+
+                else:
+                    self.respi()
 
             else:
                 QMessageBox(QMessageBox.Warning, "Error",\
                 "Projections must have same format :\
-                \nAnterior " + str(self.ant_pix.shape) +\
-                "\nPosteror" + str(self.post_pix.shape)).exec_()
+                \nAnterior " + str(self.group_ant.getImg().shape) +\
+                "\nPosteror" + str(self.group_post.getImg().shape)).exec_()
         else:
             QMessageBox(QMessageBox.Warning, "Error",\
             "Posterior and/or anterior projection not selected").exec_()
@@ -400,7 +410,7 @@ class MyWindow(QMainWindow):
             with open(directory+'.hbs_presets.txt', "r") as f:
                 lines = f.readlines()
         with open(directory+'.hbs_presets.txt', "w") as f:
-            f.write('#Patient_id,liver_thresh,liver_morpho,blood_thresh,blood_morpho,weight,size'+'\n')
+            f.write('#Patient_id,liver_thresh,liver_morpho,blood_thresh,blood_morpho,weight,size,shift_liver(2*i),shift_blood(2*i)'+'\n')
             for line in lines[1:]:
                 if line.strip().split(',')[0] != scinty_id:
                     f.write(line)
@@ -410,5 +420,9 @@ class MyWindow(QMainWindow):
             m2=str(self.group_blood.l2.wid_list[1].value())
             w=str(self.group_ant.getW())
             h=str(self.group_ant.getH())
-            f.write(','.join([scinty_id, t1, m1, t2, m2, w, h])+'\n')
+            shift_l = [item for sublist in self.group_liver.get_shift() for item in sublist]
+            shift_l = str(shift_l)[1:-1]
+            shift_b = [item for sublist in self.group_blood.get_shift() for item in sublist]
+            shift_b = str(shift_b)[1:-1]
+            f.write(','.join([scinty_id, t1, m1, t2, m2, w, h, shift_l, shift_b])+'\n')
         print('saved')
