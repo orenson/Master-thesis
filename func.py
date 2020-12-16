@@ -37,8 +37,9 @@ def f64_2_u8(img_stack):
     elif len(img_stack.shape)==3:
         new_stack = np.empty(img_stack.shape, np.uint8)
         for i in range(len(img_stack)):
-            stretched = 255 * (img_stack[i] / max(np.unique(img_stack[i])))
-            new_stack[i] = stretched.astype(np.uint8)
+            #stretched = 255 * (img_stack[i] / max(np.unique(img_stack[i])))
+            #new_stack[i] = stretched.astype(np.uint8)
+            new_stack[i] = img_stack[i].astype(np.uint8)
     else:
         raise ValueError('Array of wrong number of dimentions given to f64_2_u8')
     return(new_stack)
@@ -83,7 +84,7 @@ def gird_shape(n):
     elif n==25 or n==26 or n==27 or n==28: return((4,7))
     elif n==29 or n==30 or n==31 or n==32: return((4,8))
     elif n==33 or n==34 or n==35: return((5,7))
-    elif n==36: return((5,8))
+    elif n==36: return((4,9))
 
 
 def match_file(file_list):
@@ -146,8 +147,9 @@ def time_series(time_step, img_stack, liver_mask, blood_mask, shift_l, shift_b):
 
 
 def graph(time_step, img_stack, liver_mask, blood_mask, h, w, shift_l, shift_b):
-    lt, ct, ft, time_steps = time_series(time_step, img_stack, liver_mask, blood_mask, shift_l, shift_b)
-    fig = plt.figure(figsize=[10,5])
+    if blood_mask is not None or liver_mask is not None:
+        lt, ct, ft, time_steps = time_series(time_step, img_stack, liver_mask, blood_mask, shift_l, shift_b)
+    fig = plt.figure(figsize=[12,6])
     plt.xlabel('Time (sec)')
     plt.ylabel('Gamma event count')
     if liver_mask is not None:

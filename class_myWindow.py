@@ -1,17 +1,19 @@
 from PyQt5.QtWidgets import QRadioButton, QSlider, QLabel, QMessageBox, QFileDialog
 from PyQt5.QtWidgets import QMainWindow, QWidget, QPushButton, QInputDialog
 from func import f64_2_u8, aryth_avg, update_plt_param, graph, gird_shape, time_series
+from class_screenshot import ScreenshotWindow
 from skimage.morphology import disk, closing
+from skimage.color import rgba2rgb,rgb2gray
+from PyQt5 import QtCore, QtWidgets, QtGui
 from matplotlib import cm, pyplot as plt
 from class_groupParam import Group_param
 from skimage.filters.rank import median
 from matplotlib import image as mpimg
-from PyQt5 import QtCore, QtWidgets, QtGui
-from class_hLayout import HLayout
+from skimage.transform import resize
 from class_groupImg import GroupImg
-from class_screenshot import ScreenshotWindow
+from skimage import transform, io
+from class_hLayout import HLayout
 from skimage.draw import ellipse
-from skimage import transform
 from PyQt5.QtCore import Qt
 from datetime import date
 import pydicom as pd
@@ -65,7 +67,7 @@ class MyWindow(QMainWindow):
         self.group_blood.clicked.connect(self.blood_check)
 
         self.setCentralWidget(centralwidget)
-        #self.group_mean.wid_list[0].setCursor(Qt.SizeAllCursor)
+        #centralwidget.grabKeyboard()
         update_plt_param()
 
         if path_ant and path_post:
@@ -104,8 +106,8 @@ class MyWindow(QMainWindow):
             if self.group_blood.isChecked(): self.group_blood.setChecked(False)
             else: self.group_blood.setChecked(True)
             self.blood_check()
-        elif event.key()==QtCore.Qt.Key_C:
-            if self.computed: self.export_screenshot()
+        elif event.key()==QtCore.Qt.Key_E:
+            if self.computed: self.export()
         else:
             super().keyPressEvent(event)
 
@@ -113,6 +115,18 @@ class MyWindow(QMainWindow):
     def wheelEvent(self, event):
         delta = int(event.angleDelta().y()/8)/15
         self.s.wid_list[0].setValue(self.s.wid_list[0].value() + delta)
+
+
+    def mousePressEvent(self, event):
+        #print(event.pos())
+        if 69 <= event.x() <= 96 and 474 <= event.y() <= 489:
+            x, okPressed = QInputDialog.getInt(self,"Weight input",
+            "Select weight manually :", 50.0, 0.0, 500.0, 1)
+            if okPressed: self.group_ant.setW(x)
+        elif 101 <= event.x() <= 136 and 474 <= event.y() <= 489:
+            x, okPressed = QInputDialog.getInt(self,"Size input",
+            "Select height manually :", 160, 50, 250, 1)
+            if okPressed: self.group_ant.setH(x)
 
 
     def compute_mean(self):
@@ -131,12 +145,9 @@ class MyWindow(QMainWindow):
                 self.group_blood.mask_init(self.avg_first5_u8*self.ell, len(self.mean_f64), 50)
                 self.s.wid_list[0].setMaximum(min(ant.shape[0],post.shape[0])-1)
 
-                if self.group_mean.wid_list[2].wid_list[1].isChecked():
-                    self.transfo_med()
-                elif self.group_mean.wid_list[2].wid_list[2].isChecked():
-                    self.transfo_inv()
-                else:
-                    self.transfo_raw()
+                if self.group_mean.wid_list[2].wid_list[1].isChecked(): self.transfo_med()
+                elif self.group_mean.wid_list[2].wid_list[2].isChecked(): self.transfo_inv()
+                else: self.transfo_raw()
 
                 if not self.computed:
                     self.group_liver.l1.wid_list[1].valueChanged['int'].connect(self.liver_check)
@@ -192,8 +203,7 @@ class MyWindow(QMainWindow):
                                 self.group_blood.set_shift(shift_b.tolist())
 
 
-                else:
-                    self.respi()
+                if not found: self.respi()
 
             else:
                 QMessageBox(QMessageBox.Warning, "Error",\
@@ -337,11 +347,12 @@ class MyWindow(QMainWindow):
                 fname2 = prefix+'_timeSeries.png'
             else: fname1 = fname2 = fname
             gird_y, gird_x = gird_shape(len(selection))
-            #plt.figure(figsize=[12,7])
+            plt.figure(figsize=[12,6])
+            plt.suptitle(self.group_ant.patient+' - '+self.group_ant.date)
             for i in range(len(selection)):
                 plt.subplot(gird_y,gird_x,i+1)
                 plt.axis('off')
-                plt.title("Mean {}".format(selection[i]), fontdict={'fontsize': 8})
+                plt.title("GMean {}".format(selection[i]), fontdict={'fontsize': 8})
                 plt.imshow(self.mean_f64[selection[i]-1],cmap=plt.cm.gray)
                 mask_liv, mask_blo = self.group_mean.update_display(selection[i]-1,self.mask_l, self.mask_b,
                 0, 0, self.group_liver.get_shift(), self.group_blood.get_shift(), apply=False)
@@ -380,6 +391,7 @@ class MyWindow(QMainWindow):
         mean = np.round(self.mean_f64).astype(np.uint16)
 
         if fname:
+            '''
             for img in range(len(mean)):
                 ma = np.amax(mean[img])
                 mask_liv, mask_blo = self.group_mean.update_display(img,self.mask_l, self.mask_b,
@@ -389,14 +401,56 @@ class MyWindow(QMainWindow):
                         if self.mask_l is not None and mask_liv[i,j]:
                             mean[img,i,j] = ma
                         if self.mask_b is not None and mask_blo[i,j]:
-                            mean[img,i,j] = ma
+                            mean[img,i,j] = ma'''
 
-            with pd.dcmread(self.group_ant.getPath()) as template:
-                template[0x0018, 0x0070].value = np.sum(mean)
-                template[0x0008,0x0012].value = date.today().strftime("%Y%m%d")
-                template[0x0008,0x103E].value = 'DYN FOIE GMEAN'
-                template.PixelData = mean.tobytes()
-                template.save_as(fname)
+            if self.mask_l is not None and self.mask_b is not None:
+                plot = self.show_curve(show=False)
+                plot.savefig('.temporary1.png', bbox_inches='tight')
+                plt.close()
+
+                gird_y, gird_x = gird_shape(self.mean_u8.shape[0])
+                plt.figure(figsize=[12,6])
+                plt.suptitle(self.group_ant.patient+' - '+self.group_ant.date)
+                for i in range(self.mean_u8.shape[0]):
+                    plt.subplot(gird_y,gird_x,i+1)
+                    plt.axis('off')
+                    plt.title("GMean {}".format(i), fontdict={'fontsize': 8})
+                    plt.imshow(self.mean_f64[i],cmap=plt.cm.gray)
+                    mask_liv, mask_blo = self.group_mean.update_display(i,self.mask_l, self.mask_b,
+                    0, 0, self.group_liver.get_shift(), self.group_blood.get_shift(), apply=False)
+                    if self.mask_l is not None:
+                        plt.imshow(mask_liv, cmap='Reds', interpolation="nearest")
+                    if self.mask_b is not None:
+                        plt.imshow(mask_blo, cmap='Reds', interpolation="nearest")
+                    if i==self.mean_u8.shape[0]-1:
+                        plt.tight_layout()
+                        plt.savefig('.temporary2.png', bbox_inches='tight')
+                        plt.close()
+
+                with pd.dcmread(self.group_ant.getPath()) as template:
+                    im = io.imread(".temporary1.png")
+                    im_gray_1 = rgb2gray(rgba2rgb(im))
+                    im_gray_1 = (im_gray_1*255).astype(np.uint16)
+
+                    im = io.imread(".temporary2.png")
+                    im = resize(im, im_gray_1.shape)
+                    im_gray_2 = rgb2gray(rgba2rgb(im))
+                    im_gray_2 = (im_gray_2*255).astype(np.uint16)
+
+                    arr = np.empty((2,im_gray_1.shape[0],im_gray_1.shape[1]), dtype=np.uint16)
+                    arr[0] = im_gray_2
+                    arr[1] = im_gray_1
+                    template[0x0018, 0x0070].value = np.sum(arr)          #tot_count
+                    template[0x0028, 0x0010].value = im_gray_1.shape[0]   #rows
+                    template[0x0028, 0x0011].value = im_gray_1.shape[1]   #columns
+                    template[0x0028, 0x0008].value = 2
+                    template[0x0008,0x0012].value = date.today().strftime("%Y%m%d")
+                    template[0x0008,0x103E].value = 'DYN FOIE RESULTS'
+                    template.PixelData = arr.tobytes()
+                    template.save_as(fname)
+
+            else: QMessageBox(QMessageBox.Warning, "Error",
+            "Plot failed, both masks sould be selected to generate results").exec_()
 
 
 

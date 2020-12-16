@@ -79,14 +79,16 @@ class GroupImg(QGroupBox):
         try:
             if self.flip : self.img_f64 = scinty.pixel_array[:,:,::-1]
             else: self.img_f64 = scinty.pixel_array
-            patient = str(scinty['PatientName'].value)
-            date = str(scinty[0x0008, 0x0022].value)
+            self.patient = str(scinty['PatientName'].value)
+            self.date = process_date(str(scinty[0x0008, 0x0022].value))
             instit = str(scinty[0x0008, 0x0080].value)
             exam = str(scinty[0x0008, 0x103E].value)
-            genre = str(scinty[0x0010, 0x0040].value)
-            age = str(scinty[0x0010, 0x1010].value)
-            self.size = str(scinty[0x0010, 0x1020].value)
-            self.weight = str(scinty[0x0010, 0x1030].value)
+            self.genre = str(scinty[0x0010, 0x0040].value)
+            self.age = str(scinty[0x0010, 0x1010].value)
+            self.size=str(0)
+            self.weight=str(0)
+            #self.size = str(scinty[0x0010, 0x1020].value)
+            #self.weight = str(scinty[0x0010, 0x1030].value)
             self.tot = str(scinty[0x0018, 0x0070].value)
             rows = str(scinty[0x0028, 0x0010].value)
             col = str(scinty[0x0028, 0x0011].value)
@@ -99,15 +101,16 @@ class GroupImg(QGroupBox):
             self.slider.setMaximum(len(self.img_f64)-1)
             self.l1.wid_list[0].setText(fname)
             self.l1.wid_list[1].setText(instit)
-            self.l2.wid_list[0].setText(patient)
+            self.l2.wid_list[0].setText(self.patient)
             self.l2.wid_list[1].setText(exam+' ({}s)'.format(self.time))
-            self.l3.wid_list[0].setText(genre+'  '+age+'  '+self.weight+'  '+self.size)
+            self.l3.wid_list[0].setText(self.genre+'  '+self.age+'  '+self.weight+'  '+self.size)
             self.l3.wid_list[1].setText(frames+' x '+col+' x '+rows)
-            self.l4.wid_list[0].setText(process_date(date))
+            self.l4.wid_list[0].setText(self.date)
             self.update_display(0, None, None, 0.5, 0.5, None, None)
 
 
     def update_display(self, i, mask_l, mask_b, transpa_l, transpa_b, shift_l, shift_b, apply=True):
+
         if mask_l is not None and shift_l is not None and shift_l[i]:
             matrix = transform.EuclideanTransform(translation=(shift_l[i][0],shift_l[i][1]))
             mask_l = transform.warp(mask_l, matrix.inverse)
@@ -152,20 +155,24 @@ class GroupImg(QGroupBox):
 
     def getW(self):
         if float(self.weight) == 0:
-            self.weight, okPressed = QInputDialog.getDouble(self,"Weight input",
+            w, okPressed = QInputDialog.getDouble(self,"Weight input",
             "Weight not specified in dicom file,\nplease enter manually",
             50.0, 0.0, 500.0, 0.1)
+            self.setW(w)
         return(float(self.weight))
 
     def setW(self, x):
-        self.weight = x
+        self.weight = str(x)
+        self.l3.wid_list[0].setText(self.genre+'  '+self.age+'  '+self.weight+'  '+self.size)
 
     def getH(self):
         if float(self.size) == 0:
-            self.size, okPressed = QInputDialog.getInt(self,"Size input",
+            h, okPressed = QInputDialog.getInt(self,"Size input",
             "Height not specified in dicom file,\nplease enter manually",
             160, 50, 250, 1)
+            self.setH(h)
         return(float(self.size))
 
     def setH(self, x):
-        self.size = x
+        self.size = str(x)
+        self.l3.wid_list[0].setText(self.genre+'  '+self.age+'  '+self.weight+'  '+self.size)

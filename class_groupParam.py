@@ -4,7 +4,7 @@ from skimage.filters import threshold_otsu
 from skimage.filters.rank import median
 from matplotlib import pyplot as plt
 from skimage.morphology import disk
-from PyQt5 import QtCore, QtWidgets
+from PyQt5 import QtCore, QtWidgets, QtGui
 from class_hLayout import HLayout
 from skimage.feature import canny
 from skimage.draw import ellipse
@@ -58,6 +58,8 @@ class Group_param(QGroupBox):
         vLayout.addWidget(process)
         self.setLayout(vLayout)
 
+        #rMyIcon = QtGui.QPixmap("Icon_arrow.png");
+        #self.l4.wid_list[1].setIcon(QtGui.QIcon(rMyIcon))
 
     def mask_init(self, avg, n, thresh_shift=0):
         self.shift_list = [[0,0] for i in range(n)]
@@ -73,8 +75,8 @@ class Group_param(QGroupBox):
     def build_mask(self, thresh, morpho, priority=None, region=None):
         self.thresh = thresh
         self.mask = self.med > self.thresh
-        self.mask = closing(self.mask, disk(3))
         #self.mask = opening(self.mask, disk(3))
+        self.mask = closing(self.mask, disk(3))
         if morpho>0: self.mask = dilation(self.mask, disk(morpho))
         elif morpho<0: self.mask = erosion(self.mask, disk(-morpho))
 
@@ -111,14 +113,17 @@ class Group_param(QGroupBox):
 
 
     def show_process(self):
-        masked = np.ma.masked_where(self.mask==0, self.mask)
-        img_list = [self.avg, self.med, masked]
-        title_list = ['Avg', 'Median', 'Mask']
+        #masked = np.ma.masked_where(self.mask==0, self.mask)
+        masked = canny(self.mask)
+        img_list = [self.avg, self.med, self.med]
+        title_list = ['Avg', 'Median', 'Masked']
         plt.figure(figsize=[12,4])
         for i,t,im in zip(range(len(img_list)), title_list, img_list):
             plt.subplot(1,len(img_list),i+1)
             plt.axis('off')
             plt.title(t)
-            if i!=2: plt.imshow(im, cmap=plt.cm.gray)
-            else :plt.imshow(im, cmap='Reds')
+            #if i!=2: plt.imshow(im, cmap=plt.cm.gray)
+            #else :plt.imshow(im, cmap='Reds')
+            plt.imshow(im, cmap=plt.cm.gray)
+            if i==2: plt.imshow(np.ma.masked_where(masked==0, masked), cmap='RdYlBu')
         plt.show()
