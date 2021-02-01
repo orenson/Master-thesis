@@ -1,10 +1,11 @@
-from PyQt5.QtWidgets import QGroupBox, QPushButton, QVBoxLayout, QLabel, QSlider, QCheckBox
+from PyQt5.QtWidgets import QGroupBox, QPushButton, QVBoxLayout, QLabel, QSlider, QCheckBox, QLineEdit
 from skimage.morphology import erosion, dilation, closing, opening
-from skimage.filters import threshold_otsu
+from skimage.filters import threshold_otsu, gaussian, unsharp_mask
+from PyQt5 import QtCore, QtWidgets, QtGui
 from skimage.filters.rank import median
+from func import f64_2_u8, aryth_avg
 from matplotlib import pyplot as plt
 from skimage.morphology import disk
-from PyQt5 import QtCore, QtWidgets, QtGui
 from class_hLayout import HLayout
 from skimage.feature import canny
 from skimage.draw import ellipse
@@ -53,40 +54,56 @@ class Group_param(QGroupBox):
         self.l4.wid_list[4].setAutoRepeat(True)
         #self.l4.wid_list[1].valueChanged['int'].connect(self.l3.wid_list[2].setNum)
         vLayout.addWidget(self.l4)
-        process = QPushButton('Show build process')
-        process.clicked.connect(self.show_process)
-        vLayout.addWidget(process)
+        #process = QPushButton('Show build process')
+        #process.clicked.connect(self.show_process)
+        self.l5=HLayout(self, [QLineEdit(),QPushButton()], ['','Show build process'], (0,0,0,0))
+        self.l5.wid_list[0].setPlaceholderText("xxx")
+        self.l5.wid_list[0].setMaximumWidth(116)
+        self.l5.wid_list[1].clicked.connect(self.show_process)
+        vLayout.addWidget(self.l5)
         self.setLayout(vLayout)
 
-        #rMyIcon = QtGui.QPixmap("Icon_arrow.png");
-        #self.l4.wid_list[1].setIcon(QtGui.QIcon(rMyIcon))
+    def mask_init(self, mean_f64, start, end, fixed_thresh=0):
+        self.shift_list = [[0,0] for i in range(len(mean_f64))]
+        self.avg = f64_2_u8(aryth_avg(mean_f64[start:end]))
 
-    def mask_init(self, avg, n, thresh_shift=0):
-        self.shift_list = [[0,0] for i in range(n)]
-        self.avg = avg
-        self.med = median(self.avg, disk(3))
-        self.thresh = threshold_otsu(self.med)+thresh_shift
-        self.l1.wid_list[1].setMaximum(255)
-        self.l1.wid_list[1].setMinimum(0)
-        self.l1.wid_list[1].setValue(self.thresh)
-        self.l2.wid_list[1].setValue(0)
+        if fixed_thresh != 0: #blood
+            self.med = gaussian(median(self.avg, disk(3)),1)
+            self.l1.wid_list[1].setMaximum(50)
+            self.l1.wid_list[1].setMinimum(0)
+            self.l1.wid_list[1].setValue(5)
+            self.l2.wid_list[1].setMaximum(50)
+            self.l2.wid_list[1].setMinimum(0)
+            self.l2.wid_list[1].setValue(5)
+
+        elif fixed_thresh == 0: #liver
+            self.med = median(self.avg, disk(3))
+            self.un = self.med.copy()
+            self.thresh = threshold_otsu(self.med)
+            self.l1.wid_list[1].setMaximum(255)
+            self.l1.wid_list[1].setMinimum(0)
+            self.l1.wid_list[1].setValue(self.thresh)
+            self.l2.wid_list[1].setValue(0)
 
 
     def build_mask(self, thresh, morpho, priority=None, region=None):
-        self.thresh = thresh
-        self.mask = self.med > self.thresh
-        #self.mask = opening(self.mask, disk(3))
-        self.mask = closing(self.mask, disk(3))
-        if morpho>0: self.mask = dilation(self.mask, disk(morpho))
-        elif morpho<0: self.mask = erosion(self.mask, disk(-morpho))
 
-        if region is not None:
-            self.mask*=region
+        if region is not None: #blood
+            self.un = unsharp_mask(self.med, radius=thresh, amount=morpho)
+            self.mask = self.un*region > 0.9
+            self.mask = closing(opening(self.mask, disk(3)), disk(3))
+            if priority is not None:
+                for i in range(len(priority)):
+                    for j in range(len(priority[i])):
+                        if priority[i,j]: self.mask[i,j]=0
 
-        if priority is not None:
-            for i in range(len(priority)):
-                for j in range(len(priority[i])):
-                    if priority[i,j]: self.mask[i,j]=0
+        elif region is None: #liver
+            self.thresh = thresh
+            self.mask = self.med > self.thresh
+            self.mask = closing(opening(self.mask, disk(2)), disk(2))
+            if morpho>0: self.mask = dilation(self.mask, disk(morpho))
+            elif morpho<0: self.mask = erosion(self.mask, disk(-morpho))
+
         return(self.mask)
 
 
@@ -115,7 +132,7 @@ class Group_param(QGroupBox):
     def show_process(self):
         #masked = np.ma.masked_where(self.mask==0, self.mask)
         masked = canny(self.mask)
-        img_list = [self.avg, self.med, self.med]
+        img_list = [self.avg, self.un, self.med]
         title_list = ['Avg', 'Median', 'Masked']
         plt.figure(figsize=[12,4])
         for i,t,im in zip(range(len(img_list)), title_list, img_list):

@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QRadioButton, QSlider, QLabel, QMessageBox, QFileDialog
 from PyQt5.QtWidgets import QMainWindow, QWidget, QPushButton, QInputDialog
-from func import f64_2_u8, aryth_avg, update_plt_param, graph, gird_shape, time_series
+from func import f64_2_u8, aryth_avg, update_plt_param, graph, gird_shape, time_series, best_match, check_range_input
 from class_screenshot import ScreenshotWindow
 from skimage.morphology import disk, closing
 from skimage.color import rgba2rgb,rgb2gray
@@ -67,7 +67,6 @@ class MyWindow(QMainWindow):
         self.group_blood.clicked.connect(self.blood_check)
 
         self.setCentralWidget(centralwidget)
-        #centralwidget.grabKeyboard()
         update_plt_param()
 
         if path_ant and path_post:
@@ -136,13 +135,14 @@ class MyWindow(QMainWindow):
             if ant.shape == post.shape:
                 self.mean_f64 = (ant*post)**(1/2)
                 self.mean_u8 = f64_2_u8(self.mean_f64)
-                avg_last10_f64 = aryth_avg(self.mean_f64[-10:])
-                self.avg_last10_u8 = f64_2_u8(avg_last10_f64)
-                avg_first5_f64 = aryth_avg(self.mean_f64[2:6])
-                self.avg_first5_u8 = f64_2_u8(avg_first5_f64)
 
-                self.group_liver.mask_init(self.avg_last10_u8, len(self.mean_f64))
-                self.group_blood.mask_init(self.avg_first5_u8*self.ell, len(self.mean_f64), 50)
+                self.group_liver.mask_init(self.mean_f64, start=20, end=35)
+                self.group_liver.l5.wid_list[0].setText('25-35')
+                start_blood = best_match(self.mean_f64[:10])
+                self.group_blood.l5.wid_list[0].setText(str(start_blood))
+                self.group_blood.mask_init(self.mean_f64, start=start_blood, end=start_blood+1, fixed_thresh=0.9)
+                #self.group_liver.mask_init(self.avg_last10_f64, len(self.mean_f64))
+                #self.group_blood.mask_init(self.avg_first5_f64, len(self.mean_f64), 0.9)
                 self.s.wid_list[0].setMaximum(min(ant.shape[0],post.shape[0])-1)
 
                 if self.group_mean.wid_list[2].wid_list[1].isChecked(): self.transfo_med()
@@ -159,6 +159,8 @@ class MyWindow(QMainWindow):
                     self.group_mean.wid_list[-1].wid_list[0].clicked.connect(self.save)
                     self.group_mean.wid_list[-1].wid_list[1].clicked.connect(self.export)
                     self.group_mean.wid_list[-2].wid_list[1].clicked.connect(lambda :self.show_curve(show=True))
+                    self.group_liver.l5.wid_list[0].editingFinished.connect(self.range_edited_liv)
+                    self.group_blood.l5.wid_list[0].editingFinished.connect(self.range_edited_blo)
                     self.computed = True
 
                     self.group_liver.l4.wid_list[1].clicked.connect(lambda :(self.group_liver.\
@@ -189,14 +191,18 @@ class MyWindow(QMainWindow):
                                 found = True
                                 print('presets found')
                                 split = line.strip().split(',')
+                                self.group_liver.l5.wid_list[0].setText(split[5])
+                                self.range_edited_liv()
+                                self.group_blood.l5.wid_list[0].setText(split[6])
+                                self.range_edited_blo()
                                 self.group_liver.l1.wid_list[1].setValue(int(split[1]))
                                 self.group_liver.l2.wid_list[1].setValue(int(split[2]))
                                 self.group_blood.l1.wid_list[1].setValue(int(split[3]))
                                 self.group_blood.l2.wid_list[1].setValue(int(split[4]))
-                                self.group_ant.setW(float(split[5]))
-                                self.group_ant.setH(float(split[6]))
-                                shift_l = [int(i) for i in split[7:7+2*len(self.mean_f64)]]
-                                shift_b = [int(i) for i in split[7+2*len(self.mean_f64):7+4*len(self.mean_f64)]]
+                                self.group_ant.setW(float(split[7]))
+                                self.group_ant.setH(float(split[8]))
+                                shift_l = [int(i) for i in split[9:9+2*len(self.mean_f64)]]
+                                shift_b = [int(i) for i in split[9+2*len(self.mean_f64):9+4*len(self.mean_f64)]]
                                 shift_l = np.reshape(shift_l, (len(self.mean_f64), 2))
                                 shift_b = np.reshape(shift_b, (len(self.mean_f64), 2))
                                 self.group_liver.set_shift(shift_l.tolist())
@@ -308,6 +314,20 @@ class MyWindow(QMainWindow):
             self.mask_b, None, None, self.group_liver.get_shift(), self.group_blood.get_shift())
             plt.show()
 
+
+    def range_edited_liv(self):
+        txt = self.group_liver.l5.wid_list[0].text()
+        start, end = check_range_input(txt, len(self.mean_f64))
+        if start and end:
+            self.group_liver.mask_init(self.mean_f64, start=start, end=end)
+            self.liver_check()
+
+    def range_edited_blo(self):
+        txt = self.group_blood.l5.wid_list[0].text()
+        start, end = check_range_input(txt, len(self.mean_f64))
+        if start and end:
+            self.group_blood.mask_init(self.mean_f64, start=start, end=end, fixed_thresh=0.9)
+            self.blood_check()
 
     def export(self):
         items = ("Raw times series (.csv)", "Screenshot (.png)", "Dicom file (.dcm)")
@@ -448,6 +468,8 @@ class MyWindow(QMainWindow):
                     template[0x0008,0x103E].value = 'DYN FOIE RESULTS'
                     template.PixelData = arr.tobytes()
                     template.save_as(fname)
+                    if os.path.exists(".temporary1.png"): os.remove(".temporary1.png")
+                    if os.path.exists(".temporary2.png"): os.remove(".temporary2.png")
 
             else: QMessageBox(QMessageBox.Warning, "Error",
             "Plot failed, both masks sould be selected to generate results").exec_()
@@ -464,7 +486,7 @@ class MyWindow(QMainWindow):
             with open(directory+'.hbs_presets.txt', "r") as f:
                 lines = f.readlines()
         with open(directory+'.hbs_presets.txt', "w") as f:
-            f.write('#Patient_id,liver_thresh,liver_morpho,blood_thresh,blood_morpho,weight,size,shift_liver(2*i),shift_blood(2*i)'+'\n')
+            f.write('#Patient_id,liver_thresh,liver_morpho,blood_thresh,blood_morpho,liver_range, blood_range,weight,size,shift_liver(2*i),shift_blood(2*i)'+'\n')
             for line in lines[1:]:
                 if line.strip().split(',')[0] != scinty_id:
                     f.write(line)
@@ -472,11 +494,13 @@ class MyWindow(QMainWindow):
             m1=str(self.group_liver.l2.wid_list[1].value())
             t2=str(self.group_blood.l1.wid_list[1].value())
             m2=str(self.group_blood.l2.wid_list[1].value())
+            txt1 = self.group_liver.l5.wid_list[0].text()
+            txt2 = self.group_blood.l5.wid_list[0].text()
             w=str(self.group_ant.getW())
             h=str(self.group_ant.getH())
             shift_l = [item for sublist in self.group_liver.get_shift() for item in sublist]
             shift_l = str(shift_l)[1:-1]
             shift_b = [item for sublist in self.group_blood.get_shift() for item in sublist]
             shift_b = str(shift_b)[1:-1]
-            f.write(','.join([scinty_id, t1, m1, t2, m2, w, h, shift_l, shift_b])+'\n')
+            f.write(','.join([scinty_id, t1, m1, t2, m2, txt1, txt2, w, h, shift_l, shift_b])+'\n')
         print('saved')

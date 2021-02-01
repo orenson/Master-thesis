@@ -1,9 +1,13 @@
+from skimage.color import gray2rgb, gray2rgba, rgb2gray, rgba2rgb
+from skimage.metrics import structural_similarity as ssim
 from PyQt5.QtWidgets import QFileDialog, QMessageBox
 from skimage.morphology import disk, closing
+from skimage.filters.rank import median
 from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.integrate import trapz
 from skimage import transform
+from skimage.io import imread
 from math import exp
 import numpy as np
 
@@ -109,6 +113,40 @@ def liv_utr(ft1, ft2, lt1, lt2, ct1, ct2, t1, t2, tdemi):
     integral = (np.exp(-bcl*t1)-np.exp(-bcl*t2))/(bcl*(np.exp(-bcl*t1)))
     lcl = (lt2-lt1)/(at1*integral)
     return(bcl*60, lcl*60)
+
+
+def best_match (mean_subset):
+    template = imread('template.png')
+    template = (255*rgb2gray(rgba2rgb(template))).astype(np.uint8)
+    res = []
+    for i in range(len(mean_subset)):
+        im = f64_2_u8(mean_subset[i,:,:])
+        im = median(im, disk(2))
+        sim1 = np.sum((im.astype("float") - template.astype("float")) ** 2)
+        sim1 /= float(im.shape[0] * template.shape[1])
+        sim2 = ssim(im, template)
+        res.append(sim1)
+    print('Best heart match found at slice', res.index(min(res)))
+    return(res.index(min(res)))
+
+
+def check_range_input(txt, max_len):
+    val = txt.split('-')
+    try:
+        if len(val)==2:
+            start = int(val[0])
+            end = int(val[1])
+        elif len(val)==1:
+            start = int(val[0])
+            end = int(val[0])+1
+        else: raise ValueError
+
+        if start<end and end<=max_len: return(start, end)
+        else : raise ValueError
+        
+    except ValueError:
+        QMessageBox(QMessageBox.Warning, "Error","Invalid selection").exec_()
+        return (None, None)
 
 
 def bsa(height, weight):

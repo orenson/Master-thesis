@@ -129,11 +129,11 @@ class GroupImg(QGroupBox):
         if apply:
             self.wid_list[1].clear()
             self.wid_list[1].axis('off')
-            self.wid_list[1].imshow(self.img_f64[i], cmap=plt.cm.gray)
+            self.wid_list[1].imshow(self.img_f64[i], cmap=plt.cm.gray, interpolation = 'kaiser')
             if mask_l is not None:
-                self.wid_list[1].imshow(mask_l, cmap='coolwarm', alpha = transpa_l, interpolation="nearest")
+                self.wid_list[1].imshow(mask_l, cmap='coolwarm', alpha = transpa_l)
             if mask_b is not None:
-                self.wid_list[1].imshow(mask_b, cmap='RdYlBu', alpha = transpa_b, interpolation="nearest")
+                self.wid_list[1].imshow(mask_b, cmap='RdYlBu', alpha = transpa_b)
             self.wid_list[0].draw()
             if hasattr(self, 'tot'):
                 self.l4.wid_list[1].setText(str(np.sum(self.img_f64[i]))+' / '+self.tot)
