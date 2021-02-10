@@ -16,7 +16,7 @@ def load_file():
     dialog = QFileDialog()
     dialog.setWindowTitle("Choose a dicom file to open")
     dialog.setFileMode(QFileDialog.ExistingFile)
-    dialog.setNameFilter("Dicom (*.dcm)")
+    #dialog.setNameFilter("Dicom (*.dcm)")
     dialog.setViewMode(QFileDialog.Detail)
 
     if dialog.exec_():
@@ -143,7 +143,7 @@ def check_range_input(txt, max_len):
 
         if start<end and end<=max_len: return(start, end)
         else : raise ValueError
-        
+
     except ValueError:
         QMessageBox(QMessageBox.Warning, "Error","Invalid selection").exec_()
         return (None, None)

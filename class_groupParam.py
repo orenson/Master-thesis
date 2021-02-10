@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QGroupBox, QPushButton, QVBoxLayout, QLabel, QSlider, QCheckBox, QLineEdit
+from PyQt5.QtWidgets import QGroupBox, QPushButton, QVBoxLayout, QLabel, QCheckBox, QLineEdit
 from skimage.morphology import erosion, dilation, closing, opening
 from skimage.filters import threshold_otsu, gaussian, unsharp_mask
 from PyQt5 import QtCore, QtWidgets, QtGui
@@ -6,6 +6,7 @@ from skimage.filters.rank import median
 from func import f64_2_u8, aryth_avg
 from matplotlib import pyplot as plt
 from skimage.morphology import disk
+from class_mySlider import MySlider
 from class_hLayout import HLayout
 from skimage.feature import canny
 from skimage.draw import ellipse
@@ -24,13 +25,13 @@ class Group_param(QGroupBox):
         self.setChecked(False)
 
         vLayout = QVBoxLayout(self)
-        self.l1=HLayout(self, [QLabel(),QSlider(),QLabel()], ['Threshold :',None,'0'], (0,0,0,0))
+        self.l1=HLayout(self, [QLabel(),MySlider(),QLabel()], ['Threshold :',None,'0'], (0,0,0,0))
         self.l1.wid_list[1].setOrientation(QtCore.Qt.Horizontal)
         self.l1.wid_list[1].valueChanged['int'].connect(self.l1.wid_list[2].setNum)
         self.l1.wid_list[0].setMinimumSize(90, 0)
         self.l1.wid_list[2].setMinimumSize(30, 0)
         vLayout.addWidget(self.l1)
-        self.l2=HLayout(self, [QLabel(),QSlider(),QLabel()], ['Ero / Dilat :',None,'0'], (0,0,0,0))
+        self.l2=HLayout(self, [QLabel(),MySlider(),QLabel()], ['Ero / Dilat :',None,'0'], (0,0,0,0))
         self.l2.wid_list[1].setOrientation(QtCore.Qt.Horizontal)
         self.l2.wid_list[1].valueChanged['int'].connect(self.l2.wid_list[2].setNum)
         self.l2.wid_list[1].setMaximum(5)
@@ -38,11 +39,11 @@ class Group_param(QGroupBox):
         self.l2.wid_list[0].setMinimumSize(90, 0)
         self.l2.wid_list[2].setMinimumSize(30, 0)
         vLayout.addWidget(self.l2)
-        self.l3=HLayout(self, [QLabel(),QSlider(),QLabel()], ['Transparency :',None,'0'], (0,0,0,0))
+        self.l3=HLayout(self, [QLabel(),MySlider(),QLabel()], ['Transparency :',None,'0'], (0,0,0,0))
         self.l3.wid_list[1].setOrientation(QtCore.Qt.Horizontal)
         self.l3.wid_list[1].valueChanged['int'].connect(self.l3.wid_list[2].setNum)
         self.l3.wid_list[1].setMaximum(10)
-        self.l3.wid_list[1].setValue(5)
+        self.l3.wid_list[1].setValue(0)
         self.l3.wid_list[0].setMinimumSize(90, 0)
         self.l3.wid_list[2].setMinimumSize(30, 0)
         vLayout.addWidget(self.l3)

@@ -1,6 +1,6 @@
 numpy
 pydicom
-skimage
+scikit-image
 scipy
 matplotlib
 PyQt5

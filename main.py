@@ -26,7 +26,7 @@ if __name__ == '__main__':
     palette.setColor(QtGui.QPalette.HighlightedText, QtCore.Qt.black)
     app.setPalette(palette)
 
-    if len(sys.argv)==2:
+    if len(sys.argv)==2: #python3 images
         if not sys.argv[1].endswith('/'): sys.argv[1]+='/'
         if os.path.isdir(sys.argv[1]):
             files = os.listdir(sys.argv[1])
@@ -59,14 +59,14 @@ if __name__ == '__main__':
             else: print('No dicom files found in {}'.format(sys.argv[1]))
         else: print('{} is not a directory'.format(sys.argv[1]))
 
-    elif len(sys.argv) == 3:
+    elif len(sys.argv) == 3: #python3 main.py file1 file2
         path_ant = sys.argv[1]
         path_post = sys.argv[2]
         win = MyWindow(path_ant, path_post)
         win.show()
         sys.exit(app.exec_())
 
-    else:
+    else: #python3 main.py
         win = MyWindow()
         win.show()
         sys.exit(app.exec_())

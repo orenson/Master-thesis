@@ -11,6 +11,7 @@ from skimage.filters.rank import median
 from matplotlib import image as mpimg
 from skimage.transform import resize
 from class_groupImg import GroupImg
+from class_mySlider import MySlider
 from skimage import transform, io
 from class_hLayout import HLayout
 from skimage.draw import ellipse
@@ -33,10 +34,11 @@ class MyWindow(QMainWindow):
         self.ell[ellipse(52, 66, 30, 25, rotation=np.deg2rad(0))] = 1
         plt.ion()
 
-        self.s = HLayout(centralwidget, [QSlider(), QLabel()], [None,'0'])
+        self.s = HLayout(centralwidget, [MySlider(), QLabel()], [None,'0'])
         self.s.setGeometry(150, 510, 451, 61)
         self.s.wid_list[0].setMaximum(35)
         self.s.wid_list[0].setOrientation(QtCore.Qt.Horizontal)
+        #self.s.wid_list[0].setStyleSheet("QSlider:focus { border: 1px solid #999999} ")
         self.s.wid_list[0].valueChanged['int'].connect(self.s.wid_list[1].setNum)
         self.s.wid_list[1].setMinimumSize(30, 0)
 
@@ -49,9 +51,6 @@ class MyWindow(QMainWindow):
         filters.setMaximumHeight(33)
         filters.wid_list[0].setChecked(True)
         self.group_mean.add_widget(filters)
-        self.group_mean.wid_list[-1].wid_list[0].clicked.connect(self.transfo_raw)
-        self.group_mean.wid_list[-1].wid_list[1].clicked.connect(self.transfo_med)
-        self.group_mean.wid_list[-1].wid_list[2].clicked.connect(self.transfo_inv)
         mean_l1 = HLayout(self.group_mean,[QPushButton(), QPushButton()],['Compute geometric mean', 'Show time-activity curve'],(0,0,0,0))
         mean_l1.setMaximumHeight(24)
         self.group_mean.add_widget(mean_l1)
@@ -136,7 +135,7 @@ class MyWindow(QMainWindow):
                 self.mean_f64 = (ant*post)**(1/2)
                 self.mean_u8 = f64_2_u8(self.mean_f64)
 
-                self.group_liver.mask_init(self.mean_f64, start=20, end=35)
+                self.group_liver.mask_init(self.mean_f64, start=25, end=35)
                 self.group_liver.l5.wid_list[0].setText('25-35')
                 start_blood = best_match(self.mean_f64[:10])
                 self.group_blood.l5.wid_list[0].setText(str(start_blood))
@@ -150,6 +149,9 @@ class MyWindow(QMainWindow):
                 else: self.transfo_raw()
 
                 if not self.computed:
+                    self.group_mean.wid_list[2].wid_list[0].clicked.connect(self.transfo_raw)
+                    self.group_mean.wid_list[2].wid_list[1].clicked.connect(self.transfo_med)
+                    self.group_mean.wid_list[2].wid_list[2].clicked.connect(self.transfo_inv)
                     self.group_liver.l1.wid_list[1].valueChanged['int'].connect(self.liver_check)
                     self.group_liver.l2.wid_list[1].valueChanged['int'].connect(self.liver_check)
                     self.group_liver.l3.wid_list[1].valueChanged['int'].connect(self.liver_check)
@@ -373,7 +375,8 @@ class MyWindow(QMainWindow):
                 plt.subplot(gird_y,gird_x,i+1)
                 plt.axis('off')
                 plt.title("GMean {}".format(selection[i]), fontdict={'fontsize': 8})
-                plt.imshow(self.mean_f64[selection[i]-1],cmap=plt.cm.gray)
+                #plt.imshow(self.mean_f64[selection[i]-1],cmap=plt.cm.gray)
+                plt.imshow(self.group_mean.getImg()[selection[i]-1],cmap=plt.cm.gray)
                 mask_liv, mask_blo = self.group_mean.update_display(selection[i]-1,self.mask_l, self.mask_b,
                 0, 0, self.group_liver.get_shift(), self.group_blood.get_shift(), apply=False)
                 if self.mask_l is not None:
@@ -408,7 +411,7 @@ class MyWindow(QMainWindow):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         fname, _ = QFileDialog.getSaveFileName(self,"Save as","Export.dcm","All (.*)", options=options)
-        mean = np.round(self.mean_f64).astype(np.uint16)
+        #mean = np.round(self.mean_f64).astype(np.uint16)
 
         if fname:
             '''
@@ -435,13 +438,19 @@ class MyWindow(QMainWindow):
                     plt.subplot(gird_y,gird_x,i+1)
                     plt.axis('off')
                     plt.title("GMean {}".format(i), fontdict={'fontsize': 8})
-                    plt.imshow(self.mean_f64[i],cmap=plt.cm.gray)
+                    plt.imshow(self.group_mean.getImg()[i],cmap=plt.cm.gray)
                     mask_liv, mask_blo = self.group_mean.update_display(i,self.mask_l, self.mask_b,
                     0, 0, self.group_liver.get_shift(), self.group_blood.get_shift(), apply=False)
                     if self.mask_l is not None:
-                        plt.imshow(mask_liv, cmap='Reds', interpolation="nearest")
+                        if self.group_mean.wid_list[2].wid_list[2].isChecked():
+                            plt.imshow(mask_liv, cmap='hot', interpolation="nearest")
+                        else:
+                            plt.imshow(mask_liv, cmap='Reds', interpolation="nearest")
                     if self.mask_b is not None:
-                        plt.imshow(mask_blo, cmap='Reds', interpolation="nearest")
+                        if self.group_mean.wid_list[2].wid_list[2].isChecked():
+                            plt.imshow(mask_blo, cmap='hot', interpolation="nearest")
+                        else:
+                            plt.imshow(mask_blo, cmap='Reds', interpolation="nearest")
                     if i==self.mean_u8.shape[0]-1:
                         plt.tight_layout()
                         plt.savefig('.temporary2.png', bbox_inches='tight')
