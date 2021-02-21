@@ -8,7 +8,7 @@ class MySlider(QSlider):
     def focusInEvent(self, e):
         super(MySlider, self).focusInEvent(e)
         p = QtGui.QPalette()
-        p.setColor(QtGui.QPalette.Highlight, QtGui.QColor(150,150,150))
+        p.setColor(QtGui.QPalette.Highlight, QtGui.QColor(200,200,200))
         self.setPalette(p)
 
     def focusOutEvent(self, e):

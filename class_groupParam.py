@@ -70,7 +70,6 @@ class Group_param(QGroupBox):
         #process = QPushButton('Show build process')
         #process.clicked.connect(self.show_process)
         self.l5=HLayout(self, [QLineEdit(),QPushButton()], ['','Show build process'], (0,0,0,0))
-        #self.l5.wid_list[0].setPlaceholderText("xxx")
         self.l5.wid_list[0].setMaximumWidth(116)
         self.l5.wid_list[1].clicked.connect(self.show_process)
         self.l5.wid_list[1].setFont(QtGui.QFont('Arial', 14))

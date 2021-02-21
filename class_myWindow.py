@@ -123,7 +123,6 @@ class MyWindow(QMainWindow):
 
 
     def mousePressEvent(self, event):
-        #print(event.pos())
         if 69 <= event.x() <= 96 and 474 <= event.y() <= 489:
             x, okPressed = QInputDialog.getInt(self,"Weight input",
             "Select weight manually :", 50.0, 0.0, 500.0, 1)
@@ -190,7 +189,8 @@ class MyWindow(QMainWindow):
                     self.group_blood.l4.wid_list[4].clicked.connect(lambda :(self.group_blood.\
                     update_shift(0,1,0,0,self.s.wid_list[0].value()), self.call_update_display(self.s.wid_list[0].value())))
 
-                scinty_id = self.group_ant.getPath().split('/')[-1].split('_')[-1].split('.')[0]
+                #scinty_id = self.group_ant.getPath().split('/')[-1].split('_')[-1].split('.')[0]
+                scinty_id =  self.group_ant.getUID()
                 directory = '/'.join(self.group_ant.getPath().split('/')[:-1])+'/'
                 found = False
                 if os.path.exists(directory+'.hbs_presets.txt'):
@@ -216,6 +216,7 @@ class MyWindow(QMainWindow):
                                 shift_b = np.reshape(shift_b, (len(self.mean_f64), 2))
                                 self.group_liver.set_shift(shift_l.tolist())
                                 self.group_blood.set_shift(shift_b.tolist())
+                                break
 
 
                 if not found: self.respi()
@@ -495,7 +496,8 @@ class MyWindow(QMainWindow):
 
 
     def save(self):
-        scinty_id = self.group_ant.getPath().split('/')[-1].split('_')[-1].split('.')[0]
+        #scinty_id = self.group_ant.getPath().split('/')[-1].split('_')[-1].split('.')[0]
+        scinty_id =  self.group_ant.getUID()
         directory = '/'.join(self.group_ant.getPath().split('/')[:-1])+'/'
         lines = []
 
@@ -503,7 +505,7 @@ class MyWindow(QMainWindow):
             with open(directory+'.hbs_presets.txt', "r") as f:
                 lines = f.readlines()
         with open(directory+'.hbs_presets.txt', "w") as f:
-            f.write('#Patient_id,liver_thresh,liver_morpho,blood_thresh,blood_morpho,liver_range, blood_range,weight,size,shift_liver(2*i),shift_blood(2*i)'+'\n')
+            f.write('#UID,liver_thresh,liver_morpho,blood_thresh,blood_morpho,liver_range,blood_range,weight,size,shift_liver(2*i),shift_blood(2*i)'+'\n')
             for line in lines[1:]:
                 if line.strip().split(',')[0] != scinty_id:
                     f.write(line)

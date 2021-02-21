@@ -93,6 +93,7 @@ class GroupImg(QGroupBox):
             col = str(scinty[0x0028, 0x0011].value)
             frames = str(scinty[0x0028, 0x0008].value)
             self.time = str(scinty[0x0054, 0x0032][0].ActualFrameDuration/1000)
+            self.uid = str(scinty[(0x0008,0x0018)].value)
         except:
             QMessageBox(QMessageBox.Warning, "Error", "Error while reading file").exec_()
         else:
@@ -148,6 +149,9 @@ class GroupImg(QGroupBox):
 
     def getTimeStep(self):
         return(self.time)
+
+    def getUID(self):
+        return(self.uid)
 
     def getPath(self):
         return(self.path)
