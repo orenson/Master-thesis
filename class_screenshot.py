@@ -1,8 +1,8 @@
-from PyQt5.QtWidgets import QHBoxLayout, QDialog, QLabel, QLineEdit, QMessageBox
 from PyQt5.QtWidgets import QWidget, QPushButton, QVBoxLayout, QCheckBox, QFileDialog
+from PyQt5.QtWidgets import QHBoxLayout, QDialog, QLabel, QLineEdit, QMessageBox
+from PyQt5 import QtCore, QtWidgets
 from matplotlib import cm, pyplot as plt
 from matplotlib import image as mpimg
-from PyQt5 import QtCore, QtWidgets
 from class_groupImg import GroupImg
 from class_hLayout import HLayout
 from func import gird_shape, graph
@@ -12,8 +12,9 @@ import os
 
 
 class ScreenshotWindow(QDialog):
-    def __init__(self, max):
+    def __init__(self, max, prefix):
         super().__init__()
+        self.prefix = prefix
         self.max = max
         self.setWindowTitle("Sceenshot settings")
         mainLayout = QVBoxLayout(self)
@@ -72,7 +73,7 @@ class ScreenshotWindow(QDialog):
                 else: self.lst[i]=int(lst_it[i])
                 if i==0:
                     if self.res.isChecked():
-                        self.fileName, _ = QFileDialog.getSaveFileName(self,"Save as","Prefix.png","Pictures (.png)", options=options)
+                        self.fileName, _ = QFileDialog.getSaveFileName(self,"Save as",self.prefix+".png","Pictures (.png)", options=options)
                     elif not self.res.isChecked():
                         self.fileName, _ = QFileDialog.getSaveFileName(self,"Save as","Slices.png","Pictures (.png)", options=options)
                     if self.fileName: self.accept()

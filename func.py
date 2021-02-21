@@ -158,8 +158,8 @@ def time_series(time_step, img_stack, liver_mask, blood_mask, shift_l, shift_b):
     time_series = []
     for img in range(len(img_stack)):
         time_series.append([0,0,0])
-        liver_mask_copy = liver_mask.copy()
-        blood_mask_copy = blood_mask.copy()
+        liver_mask_copy = liver_mask.copy() if liver_mask is not None else None
+        blood_mask_copy = blood_mask.copy() if blood_mask is not None else None
 
         if liver_mask_copy is not None and shift_l is not None and shift_l[img]:
             #print('shifted mask for calcul')

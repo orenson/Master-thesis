@@ -1,10 +1,10 @@
 from matplotlib.backends.backend_qt5agg import FigureCanvas
 from PyQt5.QtWidgets import QGroupBox, QMessageBox, QWidget, QVBoxLayout, QLabel, QInputDialog
 from skimage.morphology import closing, disk
+from PyQt5 import QtCore, QtWidgets, QtGui
 from func import load_file, process_date
 from matplotlib.figure import Figure
 from matplotlib import pyplot as plt
-from PyQt5 import QtCore, QtWidgets
 from skimage.feature import canny
 from class_hLayout import HLayout
 from skimage import transform
@@ -24,6 +24,7 @@ class GroupImg(QGroupBox):
         self.setGeometry(*self.pos)
         self.setAlignment(QtCore.Qt.AlignCenter)
         self.setTitle(title)
+        self.setFont(QtGui.QFont('Arial', 20))
 
         self.wid_list = []
         fig = Figure(figsize=(3, 3))
@@ -38,7 +39,7 @@ class GroupImg(QGroupBox):
         self.setLayout(self.vLayout)
 
         self.info_widget = QWidget(self.papa)
-        self.info_widget.setGeometry(self.pos[0]+7, 434, self.pos[2]-14, 70)
+        self.info_widget.setGeometry(self.pos[0]+7, 434, self.pos[2]-14, 72)
         self.info_widget.setContentsMargins(0,0,0,0)
         info_layout = QVBoxLayout(self.info_widget)
         info_layout.setContentsMargins(0,0,0,0)
@@ -85,10 +86,8 @@ class GroupImg(QGroupBox):
             exam = str(scinty[0x0008, 0x103E].value)
             self.genre = str(scinty[0x0010, 0x0040].value)
             self.age = str(scinty[0x0010, 0x1010].value)
-            self.size=str(0)
-            self.weight=str(0)
-            #self.size = str(scinty[0x0010, 0x1020].value)
-            #self.weight = str(scinty[0x0010, 0x1030].value)
+            self.size = str(scinty[0x0010, 0x1020].value)
+            self.weight = str(scinty[0x0010, 0x1030].value)
             self.tot = str(scinty[0x0018, 0x0070].value)
             rows = str(scinty[0x0028, 0x0010].value)
             col = str(scinty[0x0028, 0x0011].value)

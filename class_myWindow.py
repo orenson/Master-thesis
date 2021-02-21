@@ -24,7 +24,7 @@ import os
 class MyWindow(QMainWindow):
     def __init__(self, path_ant=None, path_post=None):
         super(MyWindow, self).__init__()
-        self.setWindowTitle("Hepatobiliary scintigraphy image processing")
+        self.setWindowTitle("HBS_Tools")
         self.setFixedSize(1400, 773)
         centralwidget = QWidget(self)
         self.computed = False
@@ -44,19 +44,26 @@ class MyWindow(QMainWindow):
 
         self.group_ant = GroupImg(centralwidget, "Anterior projection", 5, 10, 370, 419, self.s.wid_list[0])
         self.group_ant.add_widget(QPushButton(), 'Select')
+        self.group_ant.wid_list[2].setFont(QtGui.QFont('Arial', 20))
         self.group_post = GroupImg(centralwidget, "Posterior projection", 380, 10, 370, 419, self.s.wid_list[0], True)
         self.group_post.add_widget(QPushButton(), 'Select')
+        self.group_post.wid_list[2].setFont(QtGui.QFont('Arial', 20))
         self.group_mean = GroupImg(centralwidget, "Gmean dataset", 755, 10, 639, 757, self.s.wid_list[0])
         filters = HLayout(self.group_mean,[QRadioButton() for i in range(3)],['Raw','Median filter','Negative'],(90,0,0,0))
+        filters.wid_list[0].setFont(QtGui.QFont('Arial', 14))
+        filters.wid_list[1].setFont(QtGui.QFont('Arial', 14))
+        filters.wid_list[2].setFont(QtGui.QFont('Arial', 14))
         filters.setMaximumHeight(33)
         filters.wid_list[0].setChecked(True)
         self.group_mean.add_widget(filters)
-        mean_l1 = HLayout(self.group_mean,[QPushButton(), QPushButton()],['Compute geometric mean', 'Show time-activity curve'],(0,0,0,0))
-        mean_l1.setMaximumHeight(24)
+        mean_l1 = HLayout(self.group_mean,[QPushButton(), QPushButton()],['Compute geometric mean', 'Show time-activity curves'],(0,0,0,0))
+        mean_l1.setMaximumHeight(30)
+        #mean_l1.setMaximumHeight(24)
         self.group_mean.add_widget(mean_l1)
         self.group_mean.wid_list[-1].wid_list[0].clicked.connect(self.compute_mean)
         mean_l2 = HLayout(self.group_mean,[QPushButton(), QPushButton()],['Save parameters', 'Export'],(0,0,0,0))
-        mean_l2.setMaximumHeight(24)
+        mean_l2.setMaximumHeight(30)
+        #mean_l2.setMaximumHeight(24)
         self.group_mean.add_widget(mean_l2)
 
         self.s.wid_list[0].valueChanged['int'].connect(self.call_update_display)
@@ -358,7 +365,8 @@ class MyWindow(QMainWindow):
 
 
     def export_screenshot(self):
-        self.win = ScreenshotWindow(self.group_ant.getImg().shape[0])
+        prefix = self.group_ant.getPath().split('/')[-1].split('_')[-1].split('.')[0]
+        self.win = ScreenshotWindow(self.group_ant.getImg().shape[0], prefix)
         if self.win.exec_():
             #self.win.generate_img(self.mean_f64, self.mask_l, self.mask_b, self.group_liver.get_shift(), self.group_blood.get_shift(),
             #self.group_ant.getH(), self.group_ant.getW(), self.group_ant.getTimeStep())
