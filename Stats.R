@@ -1,13 +1,22 @@
 library(ggplot2)
+library(ggcorrplot)
 library(reshape2)
 
-xls = c(5.18,6.15,7.33,6.38,7.39,6.75,5.6,6.79,2.61,2.85,6.15,9.33,4.45,4.82,3.72,7.05,7.47,5.47)
-py = c(5.41,5.99,6.82,7.76,6.9,8.95,4.89,6.15,2.1,2.33,7.51,9.08,4.22,4.48,2.89,6.11,6.18,5.52)
-#py = c(5.41,5.99,6.82,7.76,6.9,9.05,4.89,6.15,2.1,2.33,7.51,9.08,4.22,4.97,2.89,6.11,6.18,5.52)
-group = as.factor(c('Tc','Ho','Tc','Ho','Tc', 'Ho','Tc', 'Ho','Tc', 'Ho','Tc', 'Ho','Tc', 'Ho','Tc', 'Ho','Tc', 'Ho'))
-patient_id = as.factor(c(1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9))
-study_id = as.factor(1:18)
-df = data.frame(study_id, patient_id, group, xls, py)
+xls = c(5.18,6.15,7.33,6.38,7.39,6.75,5.6,6.79,2.61,2.85,6.15,9.33,4.45,4.82,3.72,7.05,7.47,5.47,4.91,4.86)
+py = c(5.41,5.99,6.82,7.76,6.9,8.95,4.89,6.15,2.1,2.33,7.51,9.08,4.22,4.48,3.07,6.25,6.18,5.52,4.88,4.73)
+#py = c(5.41,5.99,6.82,7.76,6.9,9.05,4.89,6.15,2.1,2.33,7.51,9.08,4.22,4.97,2.89,6.11,6.18,5.52,XXX,XXX)
+group = as.factor(c('Tc','Ho','Tc','Ho','Tc', 'Ho','Tc', 'Ho','Tc', 'Ho','Tc', 'Ho','Tc', 'Ho','Tc', 'Ho','Tc', 'Ho','Tc', 'Ho'))
+patient_id = as.factor(c(1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10))
+study_id = as.factor(1:20)
+age = c(74,74,87,87,61,61,78,78,51,51,50,50,75,75,64,64,94,94,58,58)
+weight = c(64,65,71,71,73,73,92.5,92.5,85,85,66,68,86,86,70.8,70.8,73,73,98.6,98.6)
+size = c(164,164,170,170,171,171,168,168,183,183,172,172,174,174,165,165,176,176,176,176)
+inr = c(1.01,1.01,1.08,1.08,1.08,1.08,1.02,1.02,1.17,1.17,1.09,1.09,1.01,1.01,NaN,NaN,1.06,1.06,NaN,NaN)
+bili = c(1.2,1.2,0.64,0.64,0.88,0.88,0.22,0.22,1.2,1.2,0.21,0.21,0.5,0.5,NaN,NaN,0.38,0.38,NaN,NaN)
+albu = c(41,41,48,48,47,47,41,41,34,34,41,41,46,46,NaN,NaN,39,39,NaN,NaN)
+df = data.frame(study_id, patient_id, group, xls, py, age, weight, size, inr, bili, albu)
+df_short = data.frame(study_id, patient_id, group, xls, py)
+df_num = data.frame(xls, py, age, weight, size, inr, bili, albu)
 
 
 # ============================== xls vs. py ==============================
@@ -38,7 +47,7 @@ ggplot(data = melt(df[,'py']), aes(x=value)) +
 
 t.test(xls, py, paired=TRUE)# >alpha, la différence entre les moyennes n'est pas significative
 
-ggplot(data = melt(df), aes(x=study_id, y=value, color=variable)) +
+ggplot(data = melt(df_short), aes(x=study_id, y=value, color=variable)) +
   geom_point() +
   geom_hline(yintercept=2.69, linetype="dashed", color = "black") +
   theme(plot.title = element_text(hjust = 0.5)) +
@@ -123,10 +132,46 @@ ggplot(data = df, aes(x=patient_id, y=xls, color=group)) +
 
 # ============================== Overview ==============================
 
-ggplot(data = melt(df), aes(x=patient_id, y=value, color=group, shape=variable)) +
+ggplot(data = melt(df_short), aes(x=patient_id, y=value, color=group, shape=variable)) +
   geom_point() +
   geom_hline(yintercept=2.69, linetype="dashed", color="black", size=.5) +
   theme(plot.title = element_text(hjust = 0.5), legend.title = element_blank()) +
   scale_shape(labels = c("ISP + xls", "Python")) +
   scale_color_hue(labels = c("Post Ho166-PLLA", "Tc99m-IDA")) +
   labs(title='Overview of results compared to clinical cutoff', y="Liver clearance", x='patient id')
+
+
+
+# ======================== Clinical variables =========================
+
+mat <- round(cor(df_num, use = "complete.obs", method = "pearson"),2)
+ggcorrplot(mat, type = "lower", p.mat = cor_pmat(df_num, use = "complete.obs", method = "pearson"))
+
+plot(df$py, df$inr, col='red', pch=1, xlab='liver clearance', ylab='inr')
+points(df$xls, df$inr, col='blue', pch=2)
+abline(lm(df$inr ~ df$py), col='red')
+abline(lm(df$inr ~ df$xls), col='blue')
+legend("topright", legend=c("python", "ISP + xls"), col=c("red", "blue"), pch=1:2)
+
+plot(df$py, df$bili, col='red', pch=1, xlab='liver clearance', ylab='bilirubine')
+points(df$xls, df$bili, col='blue', pch=2)
+abline(lm(df$bili ~ df$py), col='red')
+abline(lm(df$bili ~ df$xls), col='blue')
+legend("topright", legend=c("python", "ISP + xls"), col=c("red", "blue"), pch=1:2)
+
+plot(df$py, df$albu, col='red', pch=1, xlab='liver clearance', ylab='albumine')
+points(df$xls, df$albu, col='blue', pch=2)
+abline(lm(df$albu ~ df$py), col='red')
+abline(lm(df$albu ~ df$xls), col='blue')
+legend("bottomright", legend=c("python", "ISP + xls"), col=c("red", "blue"), pch=1:2)
+
+
+
+plot(df[df$group=='Tc','py'], df[df$group=='Tc','inr'])
+plot(df[df$group=='Ho','py'], df[df$group=='Ho','inr'])
+
+plot(df[df$group=='Tc','py'], df[df$group=='Tc','bili'])
+plot(df[df$group=='Ho','py'], df[df$group=='Ho','bili'])
+
+plot(df[df$group=='Tc','py'], df[df$group=='Tc','albu'])
+plot(df[df$group=='Ho','py'], df[df$group=='Ho','albu'])
