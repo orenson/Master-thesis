@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import os
 import sys
-from func import match_file
 from PyQt5 import QtGui, QtCore
 from class_myWindow import MyWindow
 from PyQt5.QtWidgets import QApplication
