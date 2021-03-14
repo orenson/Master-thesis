@@ -189,7 +189,6 @@ class MyWindow(QMainWindow):
                     self.group_blood.l4.wid_list[4].clicked.connect(lambda :(self.group_blood.\
                     update_shift(0,1,0,0,self.s.wid_list[0].value()), self.call_update_display(self.s.wid_list[0].value())))
 
-                #scinty_id = self.group_ant.getPath().split('/')[-1].split('_')[-1].split('.')[0]
                 scinty_id =  self.group_ant.getUID()
                 directory = '/'.join(self.group_ant.getPath().split('/')[:-1])+'/'
                 found = False
@@ -496,7 +495,6 @@ class MyWindow(QMainWindow):
 
 
     def save(self):
-        #scinty_id = self.group_ant.getPath().split('/')[-1].split('_')[-1].split('.')[0]
         scinty_id =  self.group_ant.getUID()
         directory = '/'.join(self.group_ant.getPath().split('/')[:-1])+'/'
         lines = []

@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QGroupBox, QPushButton, QVBoxLayout, QLabel, QCheckBox, QLineEdit
 from skimage.morphology import erosion, dilation, closing, opening
 from skimage.filters import threshold_otsu, gaussian, unsharp_mask
+from skimage.measure import label, regionprops
 from PyQt5 import QtCore, QtWidgets, QtGui
 from skimage.filters.rank import median
 from func import f64_2_u8, aryth_avg
@@ -104,6 +105,12 @@ class Group_param(QGroupBox):
         if region is not None: #blood
             self.un = unsharp_mask(self.med, radius=thresh, amount=morpho)
             self.mask = self.un*region > 0.9
+
+            labels = label(self.mask)
+            try:
+                self.mask = labels==np.argmax(np.bincount(labels.flat)[1:])+1
+            except: pass
+
             self.mask = closing(opening(self.mask, disk(3)), disk(3))
             if priority is not None:
                 for i in range(len(priority)):
