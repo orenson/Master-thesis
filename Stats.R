@@ -142,7 +142,7 @@ ggplot(data = melt(df_short), aes(x=patient_id, y=value, color=group, shape=vari
 
 
 
-# ======================== Clinical variables =========================
+# ======================== Clinical variables py vs xls =========================
 
 mat <- round(cor(df_num, use = "complete.obs", method = "pearson"),2)
 ggcorrplot(mat, type = "lower", p.mat = cor_pmat(df_num, use = "complete.obs", method = "pearson"))
@@ -165,13 +165,28 @@ abline(lm(df$albu ~ df$py), col='red')
 abline(lm(df$albu ~ df$xls), col='blue')
 legend("bottomright", legend=c("python", "ISP + xls"), col=c("red", "blue"), pch=1:2)
 
+# ======================== Clinical variables Tc vs Ho =========================
 
+plot(df[df$group=='Tc','py'], df[df$group=='Tc','inr'], col='red', pch=1, xlab='liver clearance', ylab='inr')
+points(df[df$group=='Tc','xls'], df[df$group=='Tc','inr'], col='red', pch=1)
+points(df[df$group=='Ho','py'], df[df$group=='Ho','inr'], col='blue', pch=2)
+points(df[df$group=='Ho','xls'], df[df$group=='Ho','inr'], col='blue', pch=2)
+#abline(lm(df$inr ~ df$py), col='red')
+#abline(lm(df$inr ~ df$xls), col='blue')
+legend("topright", legend=c("Tc", "Ho"), col=c("red", "blue"), pch=1:2)
 
-plot(df[df$group=='Tc','py'], df[df$group=='Tc','inr'])
-plot(df[df$group=='Ho','py'], df[df$group=='Ho','inr'])
+plot(df[df$group=='Tc','py'], df[df$group=='Tc','bili'], col='red', pch=1, xlab='liver clearance', ylab='bili')
+points(df[df$group=='Tc','xls'], df[df$group=='Tc','bili'], col='red', pch=1)
+points(df[df$group=='Ho','py'], df[df$group=='Ho','bili'], col='blue', pch=2)
+points(df[df$group=='Ho','xls'], df[df$group=='Ho','bili'], col='blue', pch=2)
+#abline(lm(df$inr ~ df$py), col='red')
+#abline(lm(df$inr ~ df$xls), col='blue')
+legend("topright", legend=c("Tc", "Ho"), col=c("red", "blue"), pch=1:2)
 
-plot(df[df$group=='Tc','py'], df[df$group=='Tc','bili'])
-plot(df[df$group=='Ho','py'], df[df$group=='Ho','bili'])
-
-plot(df[df$group=='Tc','py'], df[df$group=='Tc','albu'])
-plot(df[df$group=='Ho','py'], df[df$group=='Ho','albu'])
+plot(df[df$group=='Tc','py'], df[df$group=='Tc','albu'], col='red', pch=1, xlab='liver clearance', ylab='albu')
+points(df[df$group=='Tc','xls'], df[df$group=='Tc','albu'], col='red', pch=1)
+points(df[df$group=='Ho','py'], df[df$group=='Ho','albu'], col='blue', pch=2)
+points(df[df$group=='Ho','xls'], df[df$group=='Ho','albu'], col='blue', pch=2)
+#abline(lm(df$inr ~ df$py), col='red')
+#abline(lm(df$inr ~ df$xls), col='blue')
+legend("bottomright", legend=c("Tc", "Ho"), col=c("red", "blue"), pch=1:2)
