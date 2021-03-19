@@ -145,7 +145,7 @@ class MyWindow(QMainWindow):
                 self.group_liver.l5.wid_list[0].setText('25-35')
                 start_blood = best_match(self.mean_f64[:10])
                 self.group_blood.l5.wid_list[0].setText(str(start_blood))
-                self.group_blood.mask_init(self.mean_f64, start=start_blood, end=start_blood+1, fixed_thresh=0.9)
+                self.group_blood.mask_init(self.mean_f64, start=start_blood, end=start_blood+1, offset=50)
                 #self.group_liver.mask_init(self.avg_last10_f64, len(self.mean_f64))
                 #self.group_blood.mask_init(self.avg_first5_f64, len(self.mean_f64), 0.9)
                 self.s.wid_list[0].setMaximum(min(ant.shape[0],post.shape[0])-1)
@@ -335,7 +335,7 @@ class MyWindow(QMainWindow):
         txt = self.group_blood.l5.wid_list[0].text()
         start, end = check_range_input(txt, len(self.mean_f64))
         if start and end:
-            self.group_blood.mask_init(self.mean_f64, start=start, end=end, fixed_thresh=0.9)
+            self.group_blood.mask_init(self.mean_f64, start=start, end=end, offset=50)
             self.blood_check()
 
     def export(self):

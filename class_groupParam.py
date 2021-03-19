@@ -77,22 +77,29 @@ class Group_param(QGroupBox):
         vLayout.addWidget(self.l5)
         self.setLayout(vLayout)
 
-    def mask_init(self, mean_f64, start, end, fixed_thresh=0):
+    def mask_init(self, mean_f64, start, end, offset=0):
         self.shift_list = [[0,0] for i in range(len(mean_f64))]
         self.avg = f64_2_u8(aryth_avg(mean_f64[start:end]))
 
-        if fixed_thresh != 0: #blood
+        if offset != 0: #blood
             self.med = gaussian(median(self.avg, disk(3)),1)
-            self.l1.wid_list[1].setMaximum(50)
+            self.med *= 255
+            #self.l1.wid_list[1].setMaximum(50)
+            #self.l1.wid_list[1].setMinimum(0)
+            #self.l1.wid_list[1].setValue(5)
+            #self.l2.wid_list[1].setMaximum(50)
+            #self.l2.wid_list[1].setMinimum(0)
+            #self.l2.wid_list[1].setValue(5)
+            #self.un = self.med.copy()
+            self.thresh = threshold_otsu(self.med)+offset
+            self.l1.wid_list[1].setMaximum(255)
             self.l1.wid_list[1].setMinimum(0)
-            self.l1.wid_list[1].setValue(5)
-            self.l2.wid_list[1].setMaximum(50)
-            self.l2.wid_list[1].setMinimum(0)
-            self.l2.wid_list[1].setValue(5)
+            self.l1.wid_list[1].setValue(self.thresh)
+            self.l2.wid_list[1].setValue(0)
 
-        elif fixed_thresh == 0: #liver
+        elif offset == 0: #liver
             self.med = median(self.avg, disk(3))
-            self.un = self.med.copy()
+            #self.un = self.med.copy()
             self.thresh = threshold_otsu(self.med)
             self.l1.wid_list[1].setMaximum(255)
             self.l1.wid_list[1].setMinimum(0)
@@ -103,14 +110,17 @@ class Group_param(QGroupBox):
     def build_mask(self, thresh, morpho, priority=None, region=None):
 
         if region is not None: #blood
-            self.un = unsharp_mask(self.med, radius=thresh, amount=morpho)
-            self.mask = self.un*region > 0.9
+            #self.un = unsharp_mask(self.med, radius=thresh, amount=morpho)
+            #self.mask = self.un*region > 0.9
+            self.thresh = thresh
+            self.mask = self.med*region > self.thresh
+            #labels = label(self.mask)
+            #try:
+            #    self.mask = labels==np.argmax(np.bincount(labels.flat)[1:])+1
+            #except: pass
 
-            labels = label(self.mask)
-            try:
-                self.mask = labels==np.argmax(np.bincount(labels.flat)[1:])+1
-            except: pass
-
+            if morpho>0: self.mask = dilation(self.mask, disk(morpho))
+            elif morpho<0: self.mask = erosion(self.mask, disk(-morpho))
             self.mask = closing(opening(self.mask, disk(3)), disk(3))
             if priority is not None:
                 for i in range(len(priority)):
@@ -152,7 +162,7 @@ class Group_param(QGroupBox):
     def show_process(self):
         #masked = np.ma.masked_where(self.mask==0, self.mask)
         masked = canny(self.mask)
-        img_list = [self.avg, self.un, self.med]
+        img_list = [self.avg, self.med, self.med]
         title_list = ['Avg', 'Median', 'Masked']
         plt.figure(figsize=[12,4])
         for i,t,im in zip(range(len(img_list)), title_list, img_list):
