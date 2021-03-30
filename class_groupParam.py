@@ -24,7 +24,7 @@ class Group_param(QGroupBox):
         self.setTitle(title)
         self.setCheckable(True)
         self.setChecked(False)
-        self.setFont(QtGui.QFont('Arial', 20))
+        self.setFont(QtGui.QFont('Arial', 18))
 
         vLayout = QVBoxLayout(self)
         self.l1=HLayout(self, [QLabel(),MySlider(),QLabel()], ['Threshold :',None,'0'], (0,0,0,0))

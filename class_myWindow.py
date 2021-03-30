@@ -44,10 +44,10 @@ class MyWindow(QMainWindow):
 
         self.group_ant = GroupImg(centralwidget, "Anterior projection", 5, 10, 370, 419, self.s.wid_list[0])
         self.group_ant.add_widget(QPushButton(), 'Select')
-        self.group_ant.wid_list[2].setFont(QtGui.QFont('Arial', 20))
+        self.group_ant.wid_list[2].setFont(QtGui.QFont('Arial', 18))
         self.group_post = GroupImg(centralwidget, "Posterior projection", 380, 10, 370, 419, self.s.wid_list[0], True)
         self.group_post.add_widget(QPushButton(), 'Select')
-        self.group_post.wid_list[2].setFont(QtGui.QFont('Arial', 20))
+        self.group_post.wid_list[2].setFont(QtGui.QFont('Arial', 18))
         self.group_mean = GroupImg(centralwidget, "Gmean dataset", 755, 10, 639, 757, self.s.wid_list[0])
         filters = HLayout(self.group_mean,[QRadioButton() for i in range(3)],['Raw','Median filter','Negative'],(90,0,0,0))
         filters.wid_list[0].setFont(QtGui.QFont('Arial', 14))
@@ -339,13 +339,13 @@ class MyWindow(QMainWindow):
             self.blood_check()
 
     def export(self):
-        items = ("Raw times series (.csv)", "Screenshot (.png)", "Dicom file (.dcm)")
+        items = ("Raw times series (.csv)", "Screenshot (.jpg)", "Dicom file (.dcm)")
         item, ok_pressed = QInputDialog.getItem(self, "Export",
          "Select exportation format", items, 1)
 
         if ok_pressed:
             if item == "Raw times series (.csv)": self.export_raw()
-            elif item == "Screenshot (.png)": self.export_screenshot()
+            elif item == "Screenshot (.jpg)": self.export_screenshot()
             elif item == "Dicom file (.dcm)": self.export_dicom()
 
 
@@ -372,9 +372,9 @@ class MyWindow(QMainWindow):
             #self.group_ant.getH(), self.group_ant.getW(), self.group_ant.getTimeStep())
             selection, res, view, fname = self.win.get_info()
             if len(selection)>0 and res:
-                prefix = fname.split('.png')[0]
-                fname1 = prefix+'_slices.png'
-                fname2 = prefix+'_timeSeries.png'
+                prefix = fname.split('.jpg')[0]
+                fname1 = prefix+'_slices.jpg'
+                fname2 = prefix+'_timeSeries.jpg'
             else: fname1 = fname2 = fname
             gird_y, gird_x = gird_shape(len(selection))
             plt.figure(figsize=[12,6])
@@ -422,18 +422,6 @@ class MyWindow(QMainWindow):
         #mean = np.round(self.mean_f64).astype(np.uint16)
 
         if fname:
-            '''
-            for img in range(len(mean)):
-                ma = np.amax(mean[img])
-                mask_liv, mask_blo = self.group_mean.update_display(img,self.mask_l, self.mask_b,
-                0, 0, self.group_liver.get_shift(), self.group_blood.get_shift(), apply=False)
-                for i in range(len(mean[img])):
-                    for j in range(len(mean[img,i])):
-                        if self.mask_l is not None and mask_liv[i,j]:
-                            mean[img,i,j] = ma
-                        if self.mask_b is not None and mask_blo[i,j]:
-                            mean[img,i,j] = ma'''
-
             if self.mask_l is not None and self.mask_b is not None:
                 plot = self.show_curve(show=False)
                 plot.savefig('.temporary1.png', bbox_inches='tight')

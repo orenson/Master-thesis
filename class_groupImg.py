@@ -24,7 +24,7 @@ class GroupImg(QGroupBox):
         self.setGeometry(*self.pos)
         self.setAlignment(QtCore.Qt.AlignCenter)
         self.setTitle(title)
-        self.setFont(QtGui.QFont('Arial', 20))
+        self.setFont(QtGui.QFont('Arial', 18))
 
         self.wid_list = []
         fig = Figure(figsize=(3, 3))
