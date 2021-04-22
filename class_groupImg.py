@@ -40,7 +40,8 @@ class GroupImg(QGroupBox):
 
         self.info_widget = QWidget(self.papa)
         self.info_widget.setGeometry(self.pos[0]+7, 434, self.pos[2]-14, 72)
-        self.info_widget.setContentsMargins(0,0,0,0)
+        #self.info_widget.setContentsMargins(0,0,0,0)
+        #self.info_widget.setStyleSheet("border: 1px solid red;")
         info_layout = QVBoxLayout(self.info_widget)
         info_layout.setContentsMargins(0,0,0,0)
         alignment = (QtCore.Qt.AlignLeft, QtCore.Qt.AlignRight)
@@ -103,6 +104,8 @@ class GroupImg(QGroupBox):
             self.l1.wid_list[1].setText(instit)
             self.l2.wid_list[0].setText(self.patient)
             self.l2.wid_list[1].setText(exam+' ({}s)'.format(self.time))
+            if self.weight =="0": self.weight="0.0"
+            if self.size =="0": self.size="0.0"
             self.l3.wid_list[0].setText(self.genre+'  '+self.age+'  '+self.weight+'  '+self.size)
             self.l3.wid_list[1].setText(frames+' x '+col+' x '+rows)
             self.l4.wid_list[0].setText(self.date)

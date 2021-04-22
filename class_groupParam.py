@@ -66,13 +66,10 @@ class Group_param(QGroupBox):
         self.l4.wid_list[2].setFont(QtGui.QFont('Arial', 14))
         self.l4.wid_list[3].setFont(QtGui.QFont('Arial', 14))
         self.l4.wid_list[4].setFont(QtGui.QFont('Arial', 14))
-        #self.l4.wid_list[1].valueChanged['int'].connect(self.l3.wid_list[2].setNum)
         vLayout.addWidget(self.l4)
-        #process = QPushButton('Show build process')
-        #process.clicked.connect(self.show_process)
-        self.l5=HLayout(self, [QLineEdit(),QPushButton()], ['','Show build process'], (0,0,0,0))
+        self.l5=HLayout(self, [QLineEdit(),QPushButton()], ['','Manual selection'], (0,0,0,0))
         self.l5.wid_list[0].setMaximumWidth(116)
-        self.l5.wid_list[1].clicked.connect(self.show_process)
+        #self.l5.wid_list[1].clicked.connect(self.show_process)
         self.l5.wid_list[1].setFont(QtGui.QFont('Arial', 14))
         vLayout.addWidget(self.l5)
         self.setLayout(vLayout)
@@ -84,34 +81,19 @@ class Group_param(QGroupBox):
         if offset != 0: #blood
             self.med = gaussian(median(self.avg, disk(3)),1)
             self.med *= 255
-            #self.l1.wid_list[1].setMaximum(50)
-            #self.l1.wid_list[1].setMinimum(0)
-            #self.l1.wid_list[1].setValue(5)
-            #self.l2.wid_list[1].setMaximum(50)
-            #self.l2.wid_list[1].setMinimum(0)
-            #self.l2.wid_list[1].setValue(5)
-            #self.un = self.med.copy()
-            self.thresh = threshold_otsu(self.med)+offset
-            self.l1.wid_list[1].setMaximum(255)
-            self.l1.wid_list[1].setMinimum(0)
-            self.l1.wid_list[1].setValue(self.thresh)
-            self.l2.wid_list[1].setValue(0)
-
         elif offset == 0: #liver
             self.med = median(self.avg, disk(3))
-            #self.un = self.med.copy()
-            self.thresh = threshold_otsu(self.med)
-            self.l1.wid_list[1].setMaximum(255)
-            self.l1.wid_list[1].setMinimum(0)
-            self.l1.wid_list[1].setValue(self.thresh)
-            self.l2.wid_list[1].setValue(0)
+
+        self.thresh = threshold_otsu(self.med)+offset
+        self.l1.wid_list[1].setMaximum(255)
+        self.l1.wid_list[1].setMinimum(0)
+        self.l1.wid_list[1].setValue(int(self.thresh))
+        self.l2.wid_list[1].setValue(0)
 
 
     def build_mask(self, thresh, morpho, priority=None, region=None):
 
         if region is not None: #blood
-            #self.un = unsharp_mask(self.med, radius=thresh, amount=morpho)
-            #self.mask = self.un*region > 0.9
             self.thresh = thresh
             self.mask = self.med*region > self.thresh
             #labels = label(self.mask)

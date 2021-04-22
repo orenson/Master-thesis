@@ -9,10 +9,12 @@ from matplotlib import cm, pyplot as plt
 from class_groupParam import Group_param
 from skimage.filters.rank import median
 from matplotlib import image as mpimg
+from matplotlib.widgets import Button
 from skimage.transform import resize
 from class_groupImg import GroupImg
 from class_mySlider import MySlider
 from skimage import transform, io
+from class_roipoly import RoiPoly
 from class_hLayout import HLayout
 from skimage.draw import ellipse
 from PyQt5.QtCore import Qt
@@ -123,13 +125,11 @@ class MyWindow(QMainWindow):
 
 
     def mousePressEvent(self, event):
-        if 69 <= event.x() <= 96 and 474 <= event.y() <= 489:
-            x, okPressed = QInputDialog.getInt(self,"Weight input",
-            "Select weight manually :", 50.0, 0.0, 500.0, 1)
+        if 65 <= event.x() <= 100 and 474 <= event.y() <= 489:
+            x, okPressed = QInputDialog.getInt(self, "Weight input", "Select weight manually :", 50.0, 0.0, 500.0, 1)
             if okPressed: self.group_ant.setW(x)
-        elif 101 <= event.x() <= 136 and 474 <= event.y() <= 489:
-            x, okPressed = QInputDialog.getInt(self,"Size input",
-            "Select height manually :", 160, 50, 250, 1)
+        if 100 <= event.x() <= 140 and 474 <= event.y() <= 489:
+            x, okPressed = QInputDialog.getInt(self, "Size input", "Select height manually :", 160, 50, 250, 1)
             if okPressed: self.group_ant.setH(x)
 
 
@@ -146,8 +146,6 @@ class MyWindow(QMainWindow):
                 start_blood = best_match(self.mean_f64[:10])
                 self.group_blood.l5.wid_list[0].setText(str(start_blood))
                 self.group_blood.mask_init(self.mean_f64, start=start_blood, end=start_blood+1, offset=50)
-                #self.group_liver.mask_init(self.avg_last10_f64, len(self.mean_f64))
-                #self.group_blood.mask_init(self.avg_first5_f64, len(self.mean_f64), 0.9)
                 self.s.wid_list[0].setMaximum(min(ant.shape[0],post.shape[0])-1)
 
                 if self.group_mean.wid_list[2].wid_list[1].isChecked(): self.transfo_med()
@@ -169,6 +167,8 @@ class MyWindow(QMainWindow):
                     self.group_mean.wid_list[-2].wid_list[1].clicked.connect(lambda :self.show_curve(show=True))
                     self.group_liver.l5.wid_list[0].editingFinished.connect(self.range_edited_liv)
                     self.group_blood.l5.wid_list[0].editingFinished.connect(self.range_edited_blo)
+                    self.group_liver.l5.wid_list[1].clicked.connect(lambda :self.paint('liver', 'b'))
+                    self.group_blood.l5.wid_list[1].clicked.connect(lambda :self.paint('blood', 'r'))
                     self.computed = True
 
                     self.group_liver.l4.wid_list[1].clicked.connect(lambda :(self.group_liver.\
@@ -238,7 +238,7 @@ class MyWindow(QMainWindow):
             self.mask_l = self.group_liver.build_mask(thresh, morpho)
             if self.group_blood.isChecked(): self.blood_check()
             else: self.group_mean.update_display(self.s.wid_list[0].value(),self.mask_l,None,
-            self.group_liver.get_trans(), self.group_blood.get_trans(),self.group_liver.get_shift(), self.group_blood.get_shift())
+                  self.group_liver.get_trans(), self.group_blood.get_trans(),self.group_liver.get_shift(), self.group_blood.get_shift())
 
         elif self.computed and not self.group_liver.isChecked():
             self.mask_l = None
@@ -262,6 +262,50 @@ class MyWindow(QMainWindow):
         elif self.computed and not self.group_blood.isChecked():
             self.mask_b = None
             self.call_update_display(self.s.wid_list[0].value())
+
+    def paint(self, name, col):
+        plt.ioff()
+        fig, ax = plt.subplots(figsize=(6,6))
+        plt.tight_layout()
+        plt.title('Select {} ROI\nLeft click: new line segment - Right click: close region'.format(name))
+        ax.axis('off')
+
+        def cancel_callback(event):
+            plt.close()
+            global ok
+            ok = 0
+        def done_callback(event):
+            plt.close()
+        def on_close(event):
+            global ok
+            if roi.completed: ok = 1
+            else: ok = 0
+
+        axButton1 = plt.axes([0.1, 0.04, 0.4, 0.04])
+        button1 = Button(axButton1, 'Cancel', color='#151515', hovercolor='#636363')
+        button1.on_clicked(cancel_callback)
+        axButton3 = plt.axes([0.52, 0.04, 0.4, 0.04])
+        button3 = Button(axButton3, 'Done', color='#151515', hovercolor='#636363')
+        button3.on_clicked(done_callback)
+        ax.imshow(self.group_mean.getImg()[self.s.wid_list[0].value()], cmap=plt.cm.gray, interpolation = 'kaiser')
+        roi = RoiPoly(fig=fig, ax=ax, color=col, show_fig=False)
+        fig.canvas.mpl_connect('close_event', on_close)
+        plt.show()
+
+        if name == 'liver' and ok:
+            self.mask_l = roi.get_mask(self.group_mean.getImg()[self.s.wid_list[0].value()])
+            self.group_liver.set_shift([[0,0] for i in range(len(self.mean_f64))])
+        if name == 'blood' and ok:
+            self.mask_b = roi.get_mask(self.group_mean.getImg()[self.s.wid_list[0].value()])
+            self.group_blood.set_shift([[0,0] for i in range(len(self.mean_f64))])
+        if self.mask_b is not None and self.mask_l is not None:
+            for i in range(len(self.mask_l)):
+                for j in range(len(self.mask_l[i])):
+                    if self.mask_l[i,j]: self.mask_b[i,j]=0
+
+        plt.ion()
+        self.group_mean.update_display(self.s.wid_list[0].value(), self.mask_l, self.mask_b, self.group_liver.get_trans(),
+                                 self.group_blood.get_trans(), self.group_liver.get_shift(), self.group_blood.get_shift())
 
     def respi(self):
         print('respi check')
