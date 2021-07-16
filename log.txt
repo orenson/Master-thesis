@@ -1,9 +1,0 @@
-/Users/olivier/Documents/Doc_2020/Q9_25_Memoire/Master-thesis-repo/Images/Dyn_Ant_HBS8.dcm selected
-/Users/olivier/Documents/Doc_2020/Q9_25_Memoire/Master-thesis-repo/Images/Dyn_Ant_HBS8.dcm opened
-/Users/olivier/Documents/Doc_2020/Q9_25_Memoire/Master-thesis-repo/Images/Dyn_Post_HBS8.dcm selected
-/Users/olivier/Documents/Doc_2020/Q9_25_Memoire/Master-thesis-repo/Images/Dyn_Post_HBS8.dcm opened
-Best heart match found at slice 1
-presets found
-tdemi : 488.65
-Clearance rate : 0.05493
-bsa : 1.79118
