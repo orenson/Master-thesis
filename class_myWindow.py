@@ -14,7 +14,6 @@ from skimage.transform import resize
 from class_groupImg import GroupImg
 from class_mySlider import MySlider
 from skimage import transform, io
-from class_roipoly import RoiPoly
 from class_hLayout import HLayout
 from skimage.draw import ellipse
 from PyQt5.QtCore import Qt
@@ -158,10 +157,12 @@ class MyWindow(QMainWindow):
                     self.group_mean.wid_list[2].wid_list[2].clicked.connect(self.transfo_inv)
                     self.group_liver.l1.wid_list[1].valueChanged['int'].connect(self.liver_check)
                     self.group_liver.l2.wid_list[1].valueChanged['int'].connect(self.liver_check)
-                    self.group_liver.l3.wid_list[1].valueChanged['int'].connect(self.liver_check)
+                    self.group_liver.l3.wid_list[1].valueChanged['int'].connect(\
+                    lambda :(self.call_update_display(self.s.wid_list[0].value())))
                     self.group_blood.l1.wid_list[1].valueChanged['int'].connect(self.blood_check)
                     self.group_blood.l2.wid_list[1].valueChanged['int'].connect(self.blood_check)
-                    self.group_blood.l3.wid_list[1].valueChanged['int'].connect(self.blood_check)
+                    self.group_blood.l3.wid_list[1].valueChanged['int'].connect(\
+                    lambda :(self.call_update_display(self.s.wid_list[0].value())))
                     self.group_mean.wid_list[-1].wid_list[0].clicked.connect(self.save)
                     self.group_mean.wid_list[-1].wid_list[1].clicked.connect(self.export)
                     self.group_mean.wid_list[-2].wid_list[1].clicked.connect(lambda :self.show_curve(show=True))
@@ -264,39 +265,29 @@ class MyWindow(QMainWindow):
             self.call_update_display(self.s.wid_list[0].value())
 
     def paint(self, name, col):
-        plt.ioff()
-        fig, ax = plt.subplots(figsize=(6,6))
-        plt.tight_layout()
-        plt.title('Select {} ROI\nLeft click: new line segment - Right click: close region'.format(name))
-        ax.axis('off')
 
-        def cancel_callback(event):
-            plt.close()
-            global ok
-            ok = 0
-        def done_callback(event):
-            plt.close()
-        def on_close(event):
-            global ok
-            if roi.completed: ok = 1
-            else: ok = 0
+        mpimg.imsave('tmp.png', self.group_mean.getImg()[self.s.wid_list[0].value()], cmap=plt.cm.gray)
+        exit_code = os.system("python3 class_roipoly.py")
+        if exit_code != 0:
+            exit_code = os.system("python class_roipoly.py")
+        if exit_code != 0:
+            print('Cannot run manual selection')
 
-        axButton1 = plt.axes([0.1, 0.04, 0.4, 0.04])
-        button1 = Button(axButton1, 'Cancel', color='#151515', hovercolor='#636363')
-        button1.on_clicked(cancel_callback)
-        axButton3 = plt.axes([0.52, 0.04, 0.4, 0.04])
-        button3 = Button(axButton3, 'Done', color='#151515', hovercolor='#636363')
-        button3.on_clicked(done_callback)
-        ax.imshow(self.group_mean.getImg()[self.s.wid_list[0].value()], cmap=plt.cm.gray, interpolation = 'kaiser')
-        roi = RoiPoly(fig=fig, ax=ax, color=col, show_fig=False)
-        fig.canvas.mpl_connect('close_event', on_close)
-        plt.show()
+        if os.path.exists('selection.png'):
+            selection = io.imread('selection.png')
+            selection = rgb2gray(rgba2rgb(selection))
+            os.remove("selection.png")
+            print('New mask saved & loaded')
+            ok = True
+        else:
+            print('Aborted')
+            ok = False
 
         if name == 'liver' and ok:
-            self.mask_l = roi.get_mask(self.group_mean.getImg()[self.s.wid_list[0].value()])
+            self.mask_l = selection
             self.group_liver.set_shift([[0,0] for i in range(len(self.mean_f64))])
         if name == 'blood' and ok:
-            self.mask_b = roi.get_mask(self.group_mean.getImg()[self.s.wid_list[0].value()])
+            self.mask_b = selection
             self.group_blood.set_shift([[0,0] for i in range(len(self.mean_f64))])
         if self.mask_b is not None and self.mask_l is not None:
             for i in range(len(self.mask_l)):
@@ -333,7 +324,7 @@ class MyWindow(QMainWindow):
         if self.group_post.getImg() is not None:
             self.group_post.update_display(i, None, None, None, None, None, None)
         if self.computed:
-            self.group_mean.update_display(i, self.mask_l, self.mask_b,self.group_liver.get_trans(),
+            self.group_mean.update_display(i, self.mask_l, self.mask_b, self.group_liver.get_trans(),
             self.group_blood.get_trans(), self.group_liver.get_shift(), self.group_blood.get_shift())
 
     def transfo_med(self):

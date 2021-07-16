@@ -1,10 +1,13 @@
-"""Draw polygon regions of interest (ROIs) in matplotlib images,
+"""
+Draw polygon regions of interest (ROIs) in matplotlib images,
 similar to Matlab's roipoly function.
 """
 
+import os
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import image as mpimg
 from matplotlib.path import Path as MplPath
 from matplotlib.widgets import Button
 from matplotlib.figure import Figure
@@ -15,9 +18,6 @@ class RoiPoly:
     def __init__(self, fig=None, ax=None, color='b',
                  show_fig=True, close_fig=True):
         """
-
-        Parameters
-        ----------
         fig: matplotlib figure
             Figure on which to create the ROI
         ax: matplotlib axes
@@ -143,11 +143,15 @@ class RoiPoly:
                 self.completed = True
 
 
-if __name__=='__main__':
 
-    im = plt.imread('template.png')
+def main(img):
+
+    img = plt.imread(img)
     fig, ax = plt.subplots()
+    plt.tight_layout()
+    plt.title('Left click: new line segment - Right click: close region')
     ax.axis('off')
+    plt.ioff()
 
     def cancel_callback(event):
         plt.close()
@@ -157,13 +161,15 @@ if __name__=='__main__':
         plt.sca(ax)
         plt.cla()
         ax.axis('off')
-        ax.imshow(im, cmap=plt.cm.gray, interpolation = 'kaiser')
+        ax.imshow(img, cmap=plt.cm.gray, interpolation = 'kaiser')
         global roi
         roi = RoiPoly(fig=fig, ax=ax, color='r', show_fig=False)
+        global ok
     def done_callback(event):
         plt.close()
         global ok
-        ok = True
+        if roi.completed: ok = True
+        else: ok = False
 
     axButton1 = plt.axes([0.05, 0.03, 0.3, 0.04])
     button1 = Button(axButton1, 'Cancel', color='0.95', hovercolor='#636363')
@@ -174,9 +180,23 @@ if __name__=='__main__':
     axButton3 = plt.axes([0.67, 0.03, 0.3, 0.04])
     button3 = Button(axButton3, 'Done', color='0.95', hovercolor='#636363')
     button3.on_clicked(done_callback)
-    ax.imshow(im)
+    ax.imshow(img, cmap=plt.cm.gray, interpolation = 'kaiser')
     roi = RoiPoly(fig=fig, ax=ax, color='r', show_fig=False)
     plt.show()
 
-    plt.imshow(roi.get_mask(im))
-    plt.show()
+    try:
+        if ok:
+            #plt.imshow(roi.get_mask(img))
+            #plt.show()
+            mpimg.imsave("selection.png", roi.get_mask(img), cmap=plt.cm.gray)
+    except:
+        print('Not ok')
+
+
+
+if __name__=='__main__':
+    if os.path.exists('tmp.png'):
+        main('tmp.png')
+        os.remove("tmp.png")
+    else:
+        main('template.png')
