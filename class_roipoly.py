@@ -1,6 +1,7 @@
 """
 Draw polygon regions of interest (ROIs) in matplotlib images,
 similar to Matlab's roipoly function.
+https://github.com/jdoepfert/roipoly.py
 """
 
 import os

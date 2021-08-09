@@ -69,7 +69,6 @@ class Group_param(QGroupBox):
         vLayout.addWidget(self.l4)
         self.l5=HLayout(self, [QLineEdit(),QPushButton()], ['','Manual selection'], (0,0,0,0))
         self.l5.wid_list[0].setMaximumWidth(116)
-        #self.l5.wid_list[1].clicked.connect(self.show_process)
         self.l5.wid_list[1].setFont(QtGui.QFont('Arial', 14))
         vLayout.addWidget(self.l5)
         self.setLayout(vLayout)
@@ -139,20 +138,3 @@ class Group_param(QGroupBox):
 
     def set_shift(self, l):
         self.shift_list = l
-
-
-    def show_process(self):
-        #masked = np.ma.masked_where(self.mask==0, self.mask)
-        masked = canny(self.mask)
-        img_list = [self.avg, self.med, self.med]
-        title_list = ['Avg', 'Median', 'Masked']
-        plt.figure(figsize=[12,4])
-        for i,t,im in zip(range(len(img_list)), title_list, img_list):
-            plt.subplot(1,len(img_list),i+1)
-            plt.axis('off')
-            plt.title(t)
-            #if i!=2: plt.imshow(im, cmap=plt.cm.gray)
-            #else :plt.imshow(im, cmap='Reds')
-            plt.imshow(im, cmap=plt.cm.gray)
-            if i==2: plt.imshow(np.ma.masked_where(masked==0, masked), cmap='RdYlBu')
-        plt.show()
