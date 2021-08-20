@@ -32,11 +32,11 @@ if __name__ == '__main__':
     palette.setColor(QtGui.QPalette.HighlightedText, QtCore.Qt.black)
     app.setPalette(palette)
 
-    #starts the main window with the 2 specified projection opened
+    #starts the main window with the 2 specified projections opened
     if len(sys.argv) == 3: #python3 main.py anterior.dcm posterior.dcm
         win = MyWindow(sys.argv[1], sys.argv[2])
 
-    #starts the main window with no specific files
+    #starts the main window without any specific file opened
     elif len(sys.argv) == 1: #python3 main.py
         win = MyWindow()
 
