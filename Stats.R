@@ -29,17 +29,17 @@ group_ = as.factor(c('Tc', 'Ho','Tc', 'Ho','Tc', 'Ho','Tc', 'Ho','Tc', 'Ho','Tc'
 patient_id_ = as.factor(c(1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,12,12))
 df_ = data.frame(patient_id_, group_, xls_, py_, pyInfi_)
 
-ggplot(data = melt(df[c('xls','py', 'pyInfi')]), aes(x=variable, y=value)) + 
+ggplot(data = melt(df[c('xls', 'pyInfi')]), aes(x=variable, y=value)) + 
   geom_violin(trim=FALSE) + 
   geom_boxplot(width=0.1) + 
   theme(plot.title = element_text(hjust = 0.5)) +
-  scale_x_discrete(labels=c("ISP + xls","HBS_Tools (Oli)","HBS_Tools (Infi)"))+
+  scale_x_discrete(labels=c("ISP + xls","HBS_Tools (Infi)"))+
   #geom_dotplot(binaxis='y', stackdir='center', dotsize=0.8) +
   labs(title="Manual vs. automated approach", y=("Liver clearance"), x=(''))
 
 test_xls = round(shapiro.test(xls_)$p.value,3) # >0.05 distrib normale à confirmer
-test_py = round(shapiro.test(py_)$p.value,3)# >0.05 distrib normale à confirmer
-t.test(xls_, py_, paired=TRUE)# >alpha, la différence entre les moyennes n'est pas significative
+test_py = round(shapiro.test(pyInfi_)$p.value,3)# >0.05 distrib normale à confirmer
+t.test(xls_, pyInfi_, paired=TRUE)# >alpha, la différence entre les moyennes n'est pas significative
 
 ggplot(data = melt(df_short), aes(x=study_id, y=value, color=variable)) +
   geom_point() +
@@ -52,16 +52,16 @@ ggplot(data = melt(df_short), aes(x=study_id, y=value, color=variable)) +
 # ============================== bis py ==============================
 
 
-ggplot(df, aes(x=group, y=py, group=group)) + 
+ggplot(df_, aes(x=group_, y=py_, group=group_)) + 
   geom_violin(trim=FALSE) + 
   geom_boxplot(width=0.1) + 
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_x_discrete(labels=c("Post Ho166-PLLA","Tc99m-IDA")) +
-  labs(title="Tc99m-IDA vs. Post Ho166-PLLA with automated approach", y="Liver clearance (xxx processing)", x='')
+  labs(title="Tc99m-IDA vs. Post Ho166-PLLA with automated approach", y="Liver clearance (nurse processing)", x='')
 
 test = round(shapiro.test(df_[df_$group_=='Tc','pyInfi_'])$p.value,3)# >0.05 distrib normale à confirmer
 test = round(shapiro.test(df_[df_$group_=='Ho','pyInfi_'])$p.value,3)# >0.05 distrib normale à confirmer
-t.test(df_[df_$group_=='Tc','py_'], df_[df_$group_=='Ho','py_'], paired=TRUE)# <0.05 différence entre les moyennes est statistiquement significative
+t.test(df_[df_$group_=='Tc','pyInfi_'], df_[df_$group_=='Ho','pyInfi_'], paired=TRUE)# <0.05 différence entre les moyennes est statistiquement significative
 
 ggplot(data = df, aes(x=patient_id, y=py, color=group)) +
   geom_point() +
@@ -74,7 +74,7 @@ ggplot(data = df, aes(x=patient_id, y=py, color=group)) +
 # ============================== bis ISP+xls ==============================
 
 
-ggplot(df, aes(x=group, y=xls, group=group)) + 
+ggplot(df_, aes(x=group_, y=xls_, group=group_)) + 
   geom_violin(trim=FALSE) + 
   geom_boxplot(width=0.1) + 
   theme(plot.title = element_text(hjust = 0.5)) +
@@ -101,7 +101,7 @@ ggplot(data = melt(df_short), aes(x=patient_id, y=value, color=group, shape=vari
   geom_hline(yintercept=2.69, linetype="dashed", color="black", size=.5) +
   theme(plot.title = element_text(hjust = 0.5), legend.title = element_blank()) +
   scale_shape(labels = c("ISP + xls", "HBS_Tools")) +
-  scale_color_hue(labels = c("Post Ho166-PLLA", "Tc99m-IDA")) +
+  scale_color_hue(labels = c("Post Ho166-PLLA", "Pré Ho166-PLLA")) +
   labs(title='Overview of results compared to clinical cutoff', y="Liver clearance (nurse processing)", x='patient id')
 
 
@@ -109,16 +109,17 @@ ggplot(data = melt(df_short), aes(x=patient_id, y=value, color=group, shape=vari
 
 
 #df_num = data.frame(xls, pyInfi, inr, bili, albu, albi)
-df_num = data.frame(xls, py, inr, bili, albu, albi)
+df_num = data.frame(xls, pyInfi, inr, bili, albu, albi)
 names(df_num)[names(df_num) == "xls"] <- "ISP + xls"
 names(df_num)[names(df_num) == "py"] <- "HBS_Tools"
 names(df_num)[names(df_num) == "bili"] <- "bilirubine"
 names(df_num)[names(df_num) == "albu"] <- "albumine"
 names(df_num)[names(df_num) == "albi"] <- "albi score"
+names(df_num)[names(df_num) == "pyInfi"] <- "HBS_Tools"
 mat <- round(cor(df_num, use = "complete.obs", method = "pearson"),2)
 ggcorrplot(mat, type = "lower", p.mat = cor_pmat(df_num, use = "complete.obs", method = "pearson")) +
   theme(plot.title = element_text(hjust = 0.5)) +
-  labs(title="Correlation matrix (Olivier)", y='', x='')
+  labs(title="Correlation matrix", y='', x='')
 
 plot(df$py, df$inr, col='red', pch=1, xlab='liver clearance', ylab='inr')
 points(df$xls, df$inr, col='blue', pch=2)
@@ -158,9 +159,8 @@ cor.test(df$albi, df$xls)
 # ======================== Clinical variables Tc vs Ho =========================
 
 
-df_num = df[df$group=='Tc',c('xls', 'py', 'pyInfi', 'inr', 'bili', 'albu', 'albi')]
-names(df_num)[names(df_num) == "pyInfi"] <- "HBS_Tools I"
-names(df_num)[names(df_num) == "py"] <- "HBS_Tools O"
+df_num = df[df$group=='Tc',c('xls', 'pyInfi', 'inr', 'bili', 'albu', 'albi')]
+names(df_num)[names(df_num) == "pyInfi"] <- "HBS_Tools"
 names(df_num)[names(df_num) == "xls"] <- "ISP + xls"
 names(df_num)[names(df_num) == "bili"] <- "bilirubine"
 names(df_num)[names(df_num) == "albu"] <- "albumine"
@@ -170,9 +170,8 @@ ggcorrplot(mat, type = "lower", p.mat = cor_pmat(df_num, use = "complete.obs", m
   theme(plot.title = element_text(hjust = 0.5)) +
   labs(title="Correlation matrix (Tc99 data)", y='', x='')
 
-df_num = df[df$group=='Ho',c('xls', 'py', 'pyInfi', 'inr', 'bili', 'albu', 'albi')]
+df_num = df[df$group=='Ho',c('xls', 'pyInfi', 'inr', 'bili', 'albu', 'albi')]
 names(df_num)[names(df_num) == "pyInfi"] <- "HBS_Tools I"
-names(df_num)[names(df_num) == "py"] <- "HBS_Tools O"
 names(df_num)[names(df_num) == "xls"] <- "ISP + xls"
 names(df_num)[names(df_num) == "bili"] <- "bilirubine"
 names(df_num)[names(df_num) == "albu"] <- "albumine"
@@ -234,22 +233,25 @@ title("Liver clearance vs. albi score (ISP+xls data)")
 # ======================== pre-processin correction =========================
 
 
-corr = c(6.23,8.59,9.27,6.59,2.39,9.27,4.61,6.51,5.67,4.98)
-nc = c(5.72,6.44,8.98,6.46,2.3,7.8,3.85,5.06,4.65,4.16)
-lab = as.factor(c("corrected","corrected","corrected","corrected","corrected","corrected","corrected","corrected","corrected","corrected","raw","raw","raw","raw","raw","raw","raw","raw","raw","raw"))
-val = c(corr, nc)
-df= data.frame(val, lab)
+corr = c(6.23,8.59,9.27,6.59,2.39,9.27,4.61,6.51,5.67,4.98,4.02,5.33,4.17)
+nc = c(5.72,6.44,8.98,6.46,2.3,7.8,3.85,5.06,4.65,4.16,3.3,4.68,3.87)
+corr_ = c(6.23,8.59,9.27,6.59,2.39,9.27,4.61,6.51,5.67,4.98,5.33)
+nc_ = c(5.72,6.44,8.98,6.46,2.3,7.8,3.85,5.06,4.65,4.16,4.68)
+lab = as.factor(c("corrected","corrected","corrected","corrected","corrected","corrected","corrected","corrected","corrected","corrected","corrected","corrected","corrected","raw","raw","raw","raw","raw","raw","raw","raw","raw","raw","raw","raw","raw"))
+lab_ = as.factor(c("corrected","corrected","corrected","corrected","corrected","corrected","corrected","corrected","corrected","corrected","corrected","raw","raw","raw","raw","raw","raw","raw","raw","raw","raw","raw"))
+val = c(corr_, nc_)
+df= data.frame(val, lab_)
 
-test = round(shapiro.test(corr)$p.value,3)# >0.05 distrib normale à confirmer
-test = round(shapiro.test(nc)$p.value,3)# >0.05 distrib normale à confirmer
-t.test(corr, nc, paired=TRUE)
+test = round(shapiro.test(corr_)$p.value,3)# >0.05 distrib normale à confirmer
+test = round(shapiro.test(nc_)$p.value,3)# >0.05 distrib normale à confirmer
+t.test(corr_, nc_, paired=TRUE)
 
-ggplot(df, aes(x=lab, y=val)) + 
+ggplot(df, aes(x=lab_, y=val)) + 
   geom_violin(trim=FALSE) + 
   geom_boxplot(width=0.1) + 
   theme(plot.title = element_text(hjust = 0.5)) +
-  scale_x_discrete(labels=c("Pre-processed","Raw")) +
-  labs(title="Pre-processed vs. raw  (automated approach)", y="Liver clearance", x='')
+  scale_x_discrete(labels=c("Corrected","Raw")) +
+  labs(title="Corrected vs. raw  (automated approach)", y="Liver clearance", x='')
 
 df_num = df[df$group=='Ho',c('inr', 'bili', 'albu', 'albi')]
 df_num$corrected = corr
