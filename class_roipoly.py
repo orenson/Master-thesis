@@ -1,5 +1,5 @@
 """
-Draw polygon regions of interest (ROIs) in matplotlib images,
+Draw polygon regions of interest (ROIs) on matplotlib images,
 similar to Matlab's roipoly function.
 https://github.com/jdoepfert/roipoly.py
 """
@@ -16,22 +16,7 @@ from matplotlib.figure import Figure
 
 class RoiPoly:
 
-    def __init__(self, fig=None, ax=None, color='b',
-                 show_fig=True, close_fig=True):
-        """
-        fig: matplotlib figure
-            Figure on which to create the ROI
-        ax: matplotlib axes
-            Axes on which to draw the ROI
-        color: str
-           Color of the ROI
-        roicolor: str
-            deprecated, use `color` instead
-        show_fig: bool
-            Display the figure upon initializing a RoiPoly object
-        close_fig: bool
-            Close the figure after finishing ROI drawing
-        """
+    def __init__(self, fig=None, ax=None, color='b', show_fig=True, close_fig=True):
 
         self.start_point = []
         self.end_point = []
@@ -39,7 +24,7 @@ class RoiPoly:
         self.x = []
         self.y = []
         self.line = None
-        self.completed = False  # Has ROI drawing completed?
+        self.completed = False
         self.color = color
         self.fig = fig
         self.ax = ax
@@ -60,6 +45,7 @@ class RoiPoly:
             plt.show(block=True)
 
     def get_mask(self, current_image):
+        #if the polygon is closed, build a binaly mask
         if self.completed:
             ny = np.shape(current_image)[0]
             nx = np.shape(current_image)[1]
@@ -72,45 +58,24 @@ class RoiPoly:
             grid = roi_path.contains_points(points).reshape((ny, nx))
             return (grid)
 
-    def display_roi(self, **linekwargs):
-        line = plt.Line2D(self.x + [self.x[0]], self.y + [self.y[0]],
-                          color=self.color, **linekwargs)
-        ax = plt.gca()
-        ax.add_line(line)
-        plt.draw()
-
-    def get_mean_and_std(self, current_image):
-        mask = self.get_mask(current_image)
-        mean = np.mean(np.extract(mask, current_image))
-        std = np.std(np.extract(mask, current_image))
-        return mean, std
-
-    def display_mean(self, current_image, **textkwargs):
-        mean, std = self.get_mean_and_std(current_image)
-        string = "%.3f +- %.3f" % (mean, std)
-        plt.text(self.x[0], self.y[0],
-                 string, color=self.color,
-                 bbox=dict(facecolor='w', alpha=0.6), **textkwargs)
-
     def __motion_notify_callback(self, event):
         if event.inaxes == self.ax:
+            #get the mouse position
             x, y = event.xdata, event.ydata
             if ((event.button is None or event.button == 1) and self.line is not None):
-                # Move line around
+                #move line with the cursor
                 x_data = [self.previous_point[0], x]
                 y_data = [self.previous_point[1], y]
-                #print("draw line x: {} y: {}".format(x_data, y_data))
                 self.line.set_data(x_data, y_data)
                 self.fig.canvas.draw()
 
     def __button_press_callback(self, event):
-        #print('pressed callback')
         if event.inaxes == self.ax:
             x, y = event.xdata, event.ydata
             ax = event.inaxes
-            if event.button == 1 and not event.dblclick:
+            if event.button == 1 and not event.dblclick: #recieve a simple left click
                 print("Received single left mouse button click")
-                if self.line is None:  # If there is no line, create a line
+                if self.line is None:  #if there is no line, create a line
                     self.line = plt.Line2D([x, x], [y, y], marker='.', color=self.color)
                     self.start_point = [x, y]
                     self.previous_point = self.start_point
@@ -119,7 +84,7 @@ class RoiPoly:
 
                     ax.add_line(self.line)
                     self.fig.canvas.draw()
-                else:  # If there is a line, create a segment
+                else:  #if there is a line, create a segment
                     x_data = [self.previous_point[0], x]
                     y_data = [self.previous_point[1], y]
                     print("draw line x: {} y: {}".format(x_data, y_data))
@@ -132,7 +97,7 @@ class RoiPoly:
                     self.fig.canvas.draw()
 
             elif (((event.button == 1 and event.dblclick) or (event.button == 3 and not event.dblclick)) and self.line is not None):
-                # Close the loop and disconnect
+                #close the loop and disconnect
                 print("Closing shape")
                 self.fig.canvas.mpl_disconnect(self.__cid1)
                 self.fig.canvas.mpl_disconnect(self.__cid2)
@@ -146,18 +111,21 @@ class RoiPoly:
 
 
 def main(img):
-
+    #open img
     img = plt.imread(img)
+    #create a subplot
     fig, ax = plt.subplots()
     plt.tight_layout()
     plt.title('Left click: new line segment - Right click: close region')
     ax.axis('off')
     plt.ioff()
 
+    #when cancel pressed close the plot
     def cancel_callback(event):
         plt.close()
         global ok
         ok = False
+    #when clear pressed erase the current polygon
     def clear_callback(event):
         plt.sca(ax)
         plt.cla()
@@ -166,12 +134,14 @@ def main(img):
         global roi
         roi = RoiPoly(fig=fig, ax=ax, color='r', show_fig=False)
         global ok
+    #when done pressed close the plot and save the new ROI
     def done_callback(event):
         plt.close()
         global ok
         if roi.completed: ok = True
         else: ok = False
 
+    #add 3 buttons under the plot : cancel, clear and done
     axButton1 = plt.axes([0.05, 0.03, 0.3, 0.04])
     button1 = Button(axButton1, 'Cancel', color='0.95', hovercolor='#636363')
     button1.on_clicked(cancel_callback)
@@ -181,14 +151,15 @@ def main(img):
     axButton3 = plt.axes([0.67, 0.03, 0.3, 0.04])
     button3 = Button(axButton3, 'Done', color='0.95', hovercolor='#636363')
     button3.on_clicked(done_callback)
+    #plot the img
     ax.imshow(img, cmap=plt.cm.gray, interpolation = 'kaiser')
+    #wait for the user to draw a polygon
     roi = RoiPoly(fig=fig, ax=ax, color='r', show_fig=False)
     plt.show()
 
     try:
+        #when done pressed save the new ROI
         if ok:
-            #plt.imshow(roi.get_mask(img))
-            #plt.show()
             mpimg.imsave("selection.png", roi.get_mask(img), cmap=plt.cm.gray)
     except:
         print('Not ok')
@@ -197,6 +168,7 @@ def main(img):
 
 if __name__=='__main__':
     if os.path.exists('tmp.png'):
+        #use the current slice temporary saved as tmp.png
         main('tmp.png')
         os.remove("tmp.png")
     else:

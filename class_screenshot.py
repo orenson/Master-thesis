@@ -1,3 +1,8 @@
+'''
+Renson Olivier
+Modal window for Screenshot export
+'''
+
 from PyQt5.QtWidgets import QWidget, QPushButton, QVBoxLayout, QCheckBox, QFileDialog
 from PyQt5.QtWidgets import QHBoxLayout, QDialog, QLabel, QLineEdit, QMessageBox
 from PyQt5 import QtCore, QtWidgets
@@ -22,15 +27,20 @@ class ScreenshotWindow(QDialog):
         hLayout = QHBoxLayout(hWidget)
 
         text = QLabel("Select frame(s) between 1 and {} :".format(self.max))
+        #line to enter slice range to export
         self.input = QLineEdit()
         self.input.setPlaceholderText("ex : 3-6,9,10")
+        #check this box to also export the time-activity curves
         self.res = QCheckBox('Include curves and results')
+        #check this box to show the Screenshot once genereted
         self.prev = QCheckBox('Show after generation')
+        #validate
         ok = QPushButton('ok')
         ok.clicked.connect(self.ok_pressed)
         cancel = QPushButton('cancel')
         cancel.clicked.connect(self.cancel_pressed)
 
+        #build the GUI
         mainLayout.addWidget(text)
         mainLayout.addWidget(self.input)
         mainLayout.addWidget(self.res)
@@ -41,6 +51,7 @@ class ScreenshotWindow(QDialog):
         mainLayout.addWidget(hWidget)
         self.setLayout(mainLayout)
 
+    #once ok is pressed check the user inputs and ask to name the files genereted
     def ok_pressed(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
@@ -78,9 +89,11 @@ class ScreenshotWindow(QDialog):
                         self.fileName, _ = QFileDialog.getSaveFileName(self,"Save as","Slices.png","Pictures (.png)", options=options)
                     if self.fileName: self.accept()
 
+    #if cancel button pressed close the window
     def cancel_pressed(self):
         self.reject()
 
+    #access the attribute once window has been closed
     def get_info(self):
         print(self.lst,self.res.isChecked(), self.prev.isChecked(), self.fileName)
         return((self.lst, self.res.isChecked(), self.prev.isChecked(), self.fileName))
