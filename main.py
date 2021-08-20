@@ -1,3 +1,9 @@
+'''
+Renson Olivier
+HBS_Tools launching file
+'''
+
+
 #!/usr/bin/env python3
 import os
 import sys
@@ -9,6 +15,8 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
+
+    #define GUI colors
     palette = QtGui.QPalette()
     palette.setColor(QtGui.QPalette.Window, QtGui.QColor(53,53,53))
     palette.setColor(QtGui.QPalette.WindowText, QtCore.Qt.white)
@@ -24,14 +32,13 @@ if __name__ == '__main__':
     palette.setColor(QtGui.QPalette.HighlightedText, QtCore.Qt.black)
     app.setPalette(palette)
 
-    if len(sys.argv) == 3: #python3 main.py file1 file2
-        path_ant = sys.argv[1]
-        path_post = sys.argv[2]
-        win = MyWindow(path_ant, path_post)
-        win.show()
-        sys.exit(app.exec_())
+    #starts the main window with the 2 specified projection opened
+    if len(sys.argv) == 3: #python3 main.py anterior.dcm posterior.dcm
+        win = MyWindow(sys.argv[1], sys.argv[2])
 
+    #starts the main window with no specific files
     elif len(sys.argv) == 1: #python3 main.py
         win = MyWindow()
-        win.show()
-        sys.exit(app.exec_())
+
+    win.show()
+    sys.exit(app.exec_())
