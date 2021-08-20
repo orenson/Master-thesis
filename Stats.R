@@ -22,6 +22,7 @@ df = data.frame(study_id, patient_id, group, xls, py, pyInfi, age, weight, size,
 
 # ============================== xls vs. py ==============================
 
+#sans les données des patient 11 et 13 pour les t-test (meme personne que patient 10)
 xls_ = c(5.18,6.15,7.33,6.38,7.39,6.75,5.6,6.79,2.61,2.85,6.15,9.33,4.45,4.82,3.72,7.05,7.47,5.47,4.91,4.86,3.82,5.52)
 py_ = c(5.66,6.23,7.79,8.59,7.25,9.27,5.35,6.59,2.35,2.39,7.83,9.27,4.33,4.61,3.16,6.51,7.04,5.67,4.94,4.98,4.71,5.33)
 pyInfi_ = c(5.79,6.62,7.27,9.04,7.82,9.70,5.19,6.92,2.33,2.40,8.48,9.43,4.06,5.15,2.65,6.26,7.53,5.70,5.09,4.55,3.95,4.93)
@@ -29,9 +30,9 @@ group_ = as.factor(c('Tc', 'Ho','Tc', 'Ho','Tc', 'Ho','Tc', 'Ho','Tc', 'Ho','Tc'
 patient_id_ = as.factor(c(1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,12,12))
 df_ = data.frame(patient_id_, group_, xls_, py_, pyInfi_)
 
-ggplot(data = melt(df[c('xls', 'pyInfi')]), aes(x=variable, y=value)) + 
-  geom_violin(trim=FALSE) + 
-  geom_boxplot(width=0.1) + 
+ggplot(data = melt(df[c('xls', 'pyInfi')]), aes(x=variable, y=value)) +
+  geom_violin(trim=FALSE) +
+  geom_boxplot(width=0.1) +
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_x_discrete(labels=c("ISP + xls","HBS_Tools (Infi)"))+
   #geom_dotplot(binaxis='y', stackdir='center', dotsize=0.8) +
@@ -49,12 +50,12 @@ ggplot(data = melt(df_short), aes(x=study_id, y=value, color=variable)) +
   labs(title='ISP+xls and py compared to clinical cutoff', y="Liver clearance", x='study id')
 
 
-# ============================== bis py ==============================
+# ============================== pre-Ho vs. post-Ho py ==============================
 
 
-ggplot(df_, aes(x=group_, y=py_, group=group_)) + 
-  geom_violin(trim=FALSE) + 
-  geom_boxplot(width=0.1) + 
+ggplot(df_, aes(x=group_, y=py_, group=group_)) +
+  geom_violin(trim=FALSE) +
+  geom_boxplot(width=0.1) +
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_x_discrete(labels=c("Post Ho166-PLLA","Tc99m-IDA")) +
   labs(title="Tc99m-IDA vs. Post Ho166-PLLA with automated approach", y="Liver clearance (nurse processing)", x='')
@@ -71,19 +72,19 @@ ggplot(data = df, aes(x=patient_id, y=py, color=group)) +
   labs(title='Python results compared to clinical cutoff', y="Liver clearance", x='patient id')
 
 
-# ============================== bis ISP+xls ==============================
+# ============================== pre-Ho vs. post-Ho ISP+xls ==============================
 
 
-ggplot(df_, aes(x=group_, y=xls_, group=group_)) + 
-  geom_violin(trim=FALSE) + 
-  geom_boxplot(width=0.1) + 
+ggplot(df_, aes(x=group_, y=xls_, group=group_)) +
+  geom_violin(trim=FALSE) +
+  geom_boxplot(width=0.1) +
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_x_discrete(labels=c("Post Ho166-PLLA","Tc99m-IDA")) +
   labs(title="Tc99m-IDA vs. Post Ho166-PLLA with manual approach", y="Liver clearance", x='')
 
 test = round(shapiro.test(df_[df_$group_=='Tc','xls_'])$p.value,3)# >0.05 distrib normale à confirmer
 test = round(shapiro.test(df_[df_$group_=='Ho','xls_'])$p.value,3)# >0.05 distrib normale à confirmer
-t.test(df_[df_$group_=='Tc','xls_'], df_[df_$group_=='Ho','xls_'], paired=TRUE)# >0.05 
+t.test(df_[df_$group_=='Tc','xls_'], df_[df_$group_=='Ho','xls_'], paired=TRUE)# >0.05
 
 ggplot(data = df, aes(x=patient_id, y=xls, color=group)) +
   geom_point() +
@@ -105,7 +106,7 @@ ggplot(data = melt(df_short), aes(x=patient_id, y=value, color=group, shape=vari
   labs(title='Overview of results compared to clinical cutoff', y="Liver clearance (nurse processing)", x='patient id')
 
 
-# ======================== Clinical variables py vs xls =========================
+# ======================== Clinical data py vs xls =========================
 
 
 #df_num = data.frame(xls, pyInfi, inr, bili, albu, albi)
@@ -156,7 +157,7 @@ cor.test(df$albi, df$pyInfi)
 cor.test(df$albi, df$xls)
 
 
-# ======================== Clinical variables Tc vs Ho =========================
+# ======================== Clinical data pre-Ho vs. post-Ho =========================
 
 
 df_num = df[df$group=='Tc',c('xls', 'pyInfi', 'inr', 'bili', 'albu', 'albi')]
@@ -230,7 +231,7 @@ legend("bottomleft", legend=c("Tc", "Ho"), col=c("red", "blue"), pch=1:2)
 title("Liver clearance vs. albi score (ISP+xls data)")
 
 
-# ======================== pre-processin correction =========================
+# ======================== Ho interference correction =========================
 
 
 corr = c(6.23,8.59,9.27,6.59,2.39,9.27,4.61,6.51,5.67,4.98,4.02,5.33,4.17)
@@ -246,9 +247,9 @@ test = round(shapiro.test(corr_)$p.value,3)# >0.05 distrib normale à confirmer
 test = round(shapiro.test(nc_)$p.value,3)# >0.05 distrib normale à confirmer
 t.test(corr_, nc_, paired=TRUE)
 
-ggplot(df, aes(x=lab_, y=val)) + 
-  geom_violin(trim=FALSE) + 
-  geom_boxplot(width=0.1) + 
+ggplot(df, aes(x=lab_, y=val)) +
+  geom_violin(trim=FALSE) +
+  geom_boxplot(width=0.1) +
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_x_discrete(labels=c("Corrected","Raw")) +
   labs(title="Corrected vs. raw  (automated approach)", y="Liver clearance", x='')
@@ -260,4 +261,3 @@ mat <- round(cor(df_num, use = "complete.obs", method = "pearson"),2)
 ggcorrplot(mat, type = "lower", p.mat = cor_pmat(df_num, use = "complete.obs", method = "pearson")) +
   theme(plot.title = element_text(hjust = 0.5)) +
   labs(title="Correlation matrix (Post Ho166-PLLA data)", y='', x='')
-
