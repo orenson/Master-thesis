@@ -95,11 +95,6 @@ class Group_param(QGroupBox):
         if region is not None: #blood
             self.thresh = thresh
             self.mask = self.med*region > self.thresh
-            #labels = label(self.mask)
-            #try:
-            #    self.mask = labels==np.argmax(np.bincount(labels.flat)[1:])+1
-            #except: pass
-
             if morpho>0: self.mask = dilation(self.mask, disk(morpho))
             elif morpho<0: self.mask = erosion(self.mask, disk(-morpho))
             self.mask = closing(opening(self.mask, disk(3)), disk(3))
